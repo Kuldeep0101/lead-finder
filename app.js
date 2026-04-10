@@ -26,10 +26,16 @@ document.addEventListener('DOMContentLoaded', () => {
   initRangeSlider();
   initStarRating();
   initApiKeyToggle();
+  initSidebarToggle();
 
   // Restore saved API key
   const saved = localStorage.getItem('apify_api_key');
   if (saved) $('apifyApiKey').value = saved;
+
+  // Restore sidebar state
+  if (localStorage.getItem('sidebar_collapsed') === 'true') {
+    document.body.classList.add('sidebar-collapsed');
+  }
 });
 
 // ─── Range Slider ────────────────────────────────────────────
@@ -77,6 +83,17 @@ function initApiKeyToggle() {
       : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
         </svg>`;
+  });
+}
+
+// ─── Sidebar Toggle ───────────────────────────────────────────
+function initSidebarToggle() {
+  const btn = $('sidebarToggle');
+  if (!btn) return;
+  btn.addEventListener('click', () => {
+    document.body.classList.toggle('sidebar-collapsed');
+    const isCollapsed = document.body.classList.contains('sidebar-collapsed');
+    localStorage.setItem('sidebar_collapsed', isCollapsed);
   });
 }
 
