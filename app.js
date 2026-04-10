@@ -16,6 +16,8 @@ const state = {
   removeDuplicates: true,
   contactedPhones: new Set(),
   currentOutreachLead: null,
+  supabaseUrl: '',
+  supabaseKey: '',
 };
 
 const ACTOR_ID = 'compass~crawler-google-places';
@@ -73,6 +75,40 @@ document.addEventListener('DOMContentLoaded', () => {
     try {
       state.contactedPhones = new Set(JSON.parse(savedContacted));
     } catch(e) {}
+  }
+
+  // Supabase Restores & Listeners
+  const savedSbUrl = localStorage.getItem('supabase_url');
+  const savedSbKey = localStorage.getItem('supabase_key');
+  if (savedSbUrl) {
+    $('supabaseUrl').value = savedSbUrl;
+    state.supabaseUrl = savedSbUrl;
+  }
+  if (savedSbKey) {
+    $('supabaseKey').value = savedSbKey;
+    state.supabaseKey = savedSbKey;
+  }
+
+  $('supabaseUrl').addEventListener('input', (e) => {
+    state.supabaseUrl = e.target.value.trim();
+    localStorage.setItem('supabase_url', state.supabaseUrl);
+    fetchContactedFromDB(); // Attempt sync when updated
+  });
+  $('supabaseKey').addEventListener('input', (e) => {
+    state.supabaseKey = e.target.value.trim();
+    localStorage.setItem('supabase_key', state.supabaseKey);
+    fetchContactedFromDB(); // Attempt sync when updated
+  });
+  
+  // Toggle DB key visibility
+  $('toggleDbKey').addEventListener('click', () => {
+    const input = $('supabaseKey');
+    input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
+  // Initial sync attempt
+  if (state.supabaseUrl && state.supabaseKey) {
+    fetchContactedFromDB();
   }
 });
 
@@ -572,10 +608,16 @@ function confirmSendMessage() {
   const finalPhone = $('modalPhone').value.trim().replace(/[^\d+]/g, '');
   const finalMessage = $('modalMessage').value;
 
-  // Mark as contacted
+  // Mark as contacted locally immediately for snappy UI
   if (state.currentOutreachLead.phone) {
-    state.contactedPhones.add(state.currentOutreachLead.phone);
+    const leadPhone = state.currentOutreachLead.phone;
+    state.contactedPhones.add(leadPhone);
     localStorage.setItem('contacted_phones', JSON.stringify([...state.contactedPhones]));
+    
+    // Also save to Supabase if configured
+    if (state.supabaseUrl && state.supabaseKey) {
+      markContactedInDB(state.currentOutreachLead);
+    }
     
     renderGridView();
     renderTableView();
@@ -585,6 +627,61 @@ function confirmSendMessage() {
 
   const encodedMsg = encodeURIComponent(finalMessage);
   openUrl(`https://wa.me/${finalPhone}?text=${encodedMsg}`);
+}
+
+// ─── Cloud Database (Supabase) ────────────────────────────────
+async function fetchContactedFromDB() {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
+  
+  try {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=phone`, {
+      method: 'GET',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      data.forEach(row => {
+        if (row.phone) state.contactedPhones.add(row.phone);
+      });
+      // Save merged remote state down to local storage
+      localStorage.setItem('contacted_phones', JSON.stringify([...state.contactedPhones]));
+      
+      // Update UI if we are on the results screen
+      if (state.filteredLeads.length) {
+        renderGridView();
+        renderTableView();
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase sync failed (fetch):', err);
+  }
+}
+
+async function markContactedInDB(lead) {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
+
+  try {
+    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads`, {
+      method: 'POST',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates' // Prevents error if phone already exists (needs unique constraint on DB)
+      },
+      body: JSON.stringify({ 
+        phone: lead.phone,
+        name: lead.name,
+        contacted_at: new Date().toISOString()
+      })
+    });
+  } catch (err) {
+    console.warn('Supabase sync failed (post):', err);
+  }
 }
 
 // ─── Export to CSV ────────────────────────────────────────────
