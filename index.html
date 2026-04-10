@@ -343,6 +343,42 @@
     </section>
   </main>
 
+  <!-- Outreach Message Modal -->
+  <div class="modal-overlay hidden" id="outreachModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Review WhatsApp Message</h3>
+        <button class="modal-close" onclick="closeOutreachModal()" title="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="section-label">Phone Number</div>
+          <input type="text" id="modalPhone" class="form-input" placeholder="+919876543210" />
+          <div class="input-hint">Ensure the country code (+XXX) is correct for WhatsApp to launch successfully.</div>
+        </div>
+        <div class="form-section" style="margin-bottom: 0;">
+          <div class="section-label">Message Details</div>
+          <textarea id="modalMessage" class="form-input form-textarea" style="min-height: 180px;" rows="8"></textarea>
+          <div class="input-hint">You can edit this message specifically for this lead before sending.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel-btn" onclick="closeOutreachModal()">Cancel</button>
+        <button class="modal-btn send-btn" onclick="confirmSendMessage()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+          </svg>
+          Send to WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Notification -->
   <div class="toast hidden" id="toast">
     <span id="toastMessage">Copied!</span>

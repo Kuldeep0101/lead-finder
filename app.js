@@ -14,6 +14,8 @@ const state = {
   isLoading: false,
   outreachTemplate: '',
   removeDuplicates: true,
+  contactedPhones: new Set(),
+  currentOutreachLead: null,
 };
 
 const ACTOR_ID = 'compass~crawler-google-places';
@@ -64,6 +66,14 @@ document.addEventListener('DOMContentLoaded', () => {
     localStorage.setItem('remove_duplicates', state.removeDuplicates);
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
   });
+
+  // Restore Contacted history
+  const savedContacted = localStorage.getItem('contacted_phones');
+  if (savedContacted) {
+    try {
+      state.contactedPhones = new Set(JSON.parse(savedContacted));
+    } catch(e) {}
+  }
 });
 
 // ─── Range Slider ────────────────────────────────────────────
@@ -329,12 +339,20 @@ function createLeadCard(lead, idx) {
       </div>`
     : '';
 
+  const isContacted = lead.phone && state.contactedPhones.has(lead.phone);
+
   const waBtn = lead.phone 
-    ? `<button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-        </svg> WhatsApp
-      </button>`
+    ? (isContacted 
+      ? `<button class="card-action-btn contacted-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg> Contacted
+        </button>`
+      : `<button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+          </svg> WhatsApp
+        </button>`)
     : '';
 
   const websiteHtml = lead.website
@@ -527,20 +545,46 @@ function openWhatsApp(phone, leadIdx) {
   // Get the actual filtered lead
   const lead = state.filteredLeads[leadIdx];
   if (!lead) return; // defensive
+  
+  state.currentOutreachLead = lead;
 
   // Format phone number (remove non-digits, keep leading + if exists)
   let cleanPhone = phone.replace(/[^\d+]/g, '');
   
-  // If it starts with a plus, it's perfect. If not, and we are searching a specific country, 
-  // it might lack the country code, but WA handles mostly well. For safety:
-  if (!cleanPhone.startsWith('+')) {
-    // Basic sanitization
-    cleanPhone = cleanPhone.replace(/^0+/, ''); 
+  // Basic sanitization
+  if (!cleanPhone.startsWith('+')) cleanPhone = cleanPhone.replace(/^0+/, ''); 
+
+  // Pre-fill modal
+  $('modalPhone').value = cleanPhone;
+  $('modalMessage').value = generateMessageTemplate(lead);
+  
+  $('outreachModal').classList.remove('hidden');
+}
+
+function closeOutreachModal() {
+  $('outreachModal').classList.add('hidden');
+  state.currentOutreachLead = null;
+}
+
+function confirmSendMessage() {
+  if (!state.currentOutreachLead) return;
+
+  const finalPhone = $('modalPhone').value.trim().replace(/[^\d+]/g, '');
+  const finalMessage = $('modalMessage').value;
+
+  // Mark as contacted
+  if (state.currentOutreachLead.phone) {
+    state.contactedPhones.add(state.currentOutreachLead.phone);
+    localStorage.setItem('contacted_phones', JSON.stringify([...state.contactedPhones]));
+    
+    renderGridView();
+    renderTableView();
   }
 
-  const message = generateMessageTemplate(lead);
-  const encodedMsg = encodeURIComponent(message);
-  openUrl(`https://wa.me/${cleanPhone}?text=${encodedMsg}`);
+  closeOutreachModal();
+
+  const encodedMsg = encodeURIComponent(finalMessage);
+  openUrl(`https://wa.me/${finalPhone}?text=${encodedMsg}`);
 }
 
 // ─── Export to CSV ────────────────────────────────────────────
