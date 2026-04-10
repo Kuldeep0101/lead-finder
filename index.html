@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LeadMapper — Google Maps Lead Finder</title>
+  <meta name="description" content="AI-powered lead generation dashboard using Apify Google Maps Scraper. Find, filter, and export business leads in seconds." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Background Orbs -->
+  <div class="bg-orb orb-1"></div>
+  <div class="bg-orb orb-2"></div>
+  <div class="bg-orb orb-3"></div>
+
+  <!-- Header -->
+  <header class="header" id="header">
+    <div class="header-inner">
+      <div class="logo">
+        <div class="logo-icon">
+          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <span class="logo-text">Lead<span class="accent">Mapper</span></span>
+      </div>
+      <div class="header-badge">
+        <span class="badge-dot"></span>
+        Powered by Apify
+      </div>
+    </div>
+  </header>
+
+  <main class="main-layout">
+    <!-- Sidebar / Control Panel -->
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M5.93 4.93a10 10 0 0 0 0 14.14"/>
+        </svg>
+        Configuration
+      </div>
+
+      <!-- API Key Section -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 2l-2 2m-7.61 7.61a5.5 5.5 0 1 1-7.778 7.778 5.5 5.5 0 0 1 7.777-7.777zm0 0L15.5 7.5m0 0l3 3L22 7l-3-3m-3.5 3.5L19 4"/>
+          </svg>
+          Apify API Key
+        </div>
+        <div class="input-wrapper">
+          <input type="password" id="apifyApiKey" class="form-input" placeholder="apify_api_XXXXXXXXXXXXXXXX" autocomplete="off" />
+          <button class="toggle-visibility" id="toggleApiKey" title="Show/Hide API key">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
+              <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+            </svg>
+          </button>
+        </div>
+        <div class="input-hint">
+          <a href="https://console.apify.com/account/integrations" target="_blank" rel="noopener">Get your key →</a>
+        </div>
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Search Query -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+          </svg>
+          What are you looking for?
+        </div>
+        <input type="text" id="searchQuery" class="form-input" placeholder="e.g. coaching institutes, dental clinics…" />
+        <div class="input-hint">Business type or keyword</div>
+      </div>
+
+      <!-- Location -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          Location
+        </div>
+        <input type="text" id="locationQuery" class="form-input" placeholder="e.g. Mumbai, Maharashtra, India" />
+        <div class="input-hint">City, state, or country</div>
+      </div>
+
+      <!-- Max Results -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+            <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+          </svg>
+          Max Results
+        </div>
+        <div class="range-container">
+          <input type="range" id="maxResultsSlider" class="range-input" min="5" max="200" value="20" step="5" />
+          <div class="range-labels">
+            <span>5</span>
+            <span class="range-value" id="rangeValue">20</span>
+            <span>200</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Minimum Rating Filter -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          Min. Rating
+        </div>
+        <div class="star-rating" id="starRating">
+          <button class="star-btn active" data-value="0" id="star-0" title="Any rating">Any</button>
+          <button class="star-btn" data-value="3" id="star-3">3★+</button>
+          <button class="star-btn" data-value="3.5" id="star-35">3.5★+</button>
+          <button class="star-btn" data-value="4" id="star-4">4★+</button>
+          <button class="star-btn" data-value="4.5" id="star-45">4.5★+</button>
+        </div>
+      </div>
+
+      <!-- Language Filter -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+          Language
+        </div>
+        <select id="languageSelect" class="form-input form-select">
+          <option value="en">English</option>
+          <option value="hi">Hindi</option>
+          <option value="es">Spanish</option>
+          <option value="fr">French</option>
+          <option value="de">German</option>
+          <option value="ja">Japanese</option>
+          <option value="zh">Chinese</option>
+          <option value="ar">Arabic</option>
+          <option value="pt">Portuguese</option>
+        </select>
+      </div>
+
+      <!-- Generate Button -->
+      <button class="generate-btn" id="generateBtn" onclick="generateLeads()">
+        <span class="btn-content" id="btnContent">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
+          Generate Leads
+        </span>
+        <span class="btn-loader hidden" id="btnLoader">
+          <span class="spinner"></span>
+          Scraping…
+        </span>
+      </button>
+
+      <div class="sidebar-footer">
+        <div class="stat-pill" id="totalCount">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
+            <circle cx="9" cy="7" r="4"/>
+            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
+            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
+          </svg>
+          <span id="totalCountText">0 leads found</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Dashboard -->
+    <section class="dashboard" id="dashboard">
+      <!-- Empty State -->
+      <div class="empty-state" id="emptyState">
+        <div class="empty-icon">
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <h2 class="empty-title">Find Your First Leads</h2>
+        <p class="empty-desc">Configure your search criteria in the panel on the left, enter your Apify API key, then hit <strong>Generate Leads</strong> to discover local businesses from Google Maps.</p>
+        <div class="feature-chips">
+          <div class="chip"><span>📍</span> Location-based search</div>
+          <div class="chip"><span>⭐</span> Rating filter</div>
+          <div class="chip"><span>📞</span> Phone & Email extraction</div>
+          <div class="chip"><span>💾</span> Export to CSV</div>
+        </div>
+      </div>
+
+      <!-- Loading State -->
+      <div class="loading-state hidden" id="loadingState">
+        <div class="loading-animation">
+          <div class="pulse-ring"></div>
+          <div class="pulse-ring delay-1"></div>
+          <div class="pulse-ring delay-2"></div>
+          <div class="map-pin-loader">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+        </div>
+        <h2 class="loading-title">Scraping Google Maps…</h2>
+        <p class="loading-desc" id="loadingDesc">This may take 1–3 minutes depending on your search.</p>
+        <div class="progress-bar-container">
+          <div class="progress-bar" id="progressBar"></div>
+        </div>
+        <div class="loading-steps" id="loadingSteps">
+          <div class="step active" id="step1">🚀 Starting Apify actor…</div>
+          <div class="step" id="step2">🗺️ Scanning Google Maps…</div>
+          <div class="step" id="step3">📋 Extracting business data…</div>
+          <div class="step" id="step4">✅ Processing results…</div>
+        </div>
+      </div>
+
+      <!-- Results Area -->
+      <div class="results-area hidden" id="resultsArea">
+        <!-- Toolbar -->
+        <div class="results-toolbar">
+          <div class="results-meta">
+            <h2 class="results-title" id="resultsTitle">Leads Found</h2>
+            <div class="results-subtitle" id="resultsSubtitle"></div>
+          </div>
+          <div class="toolbar-actions">
+            <div class="search-filter">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              <input type="text" id="filterInput" class="filter-input" placeholder="Filter results…" oninput="filterLeads()" />
+            </div>
+            <div class="view-toggle">
+              <button class="view-btn active" id="viewGrid" onclick="setView('grid')" title="Grid View">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                </svg>
+              </button>
+              <button class="view-btn" id="viewTable" onclick="setView('table')" title="Table View">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
+                  <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+              </button>
+            </div>
+            <button class="export-btn" id="exportBtn" onclick="exportCSV()">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                <polyline points="7 10 12 15 17 10"/>
+                <line x1="12" y1="15" x2="12" y2="3"/>
+              </svg>
+              Export CSV
+            </button>
+          </div>
+        </div>
+
+        <!-- Grid View -->
+        <div class="leads-grid" id="leadsGrid"></div>
+
+        <!-- Table View -->
+        <div class="table-wrapper hidden" id="tableWrapper">
+          <table class="leads-table">
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Business Name</th>
+                <th>Category</th>
+                <th>Rating</th>
+                <th>Reviews</th>
+                <th>Phone</th>
+                <th>Website</th>
+                <th>Address</th>
+              </tr>
+            </thead>
+            <tbody id="leadsTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Error State -->
+      <div class="error-state hidden" id="errorState">
+        <div class="error-icon">
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+        </div>
+        <h2 class="error-title">Something went wrong</h2>
+        <p class="error-message" id="errorMessage">An unexpected error occurred. Please check your API key and try again.</p>
+        <button class="retry-btn" onclick="resetToEmpty()">← Back to Search</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Toast Notification -->
+  <div class="toast hidden" id="toast">
+    <span id="toastMessage">Copied!</span>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
