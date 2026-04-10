@@ -12,6 +12,8 @@ const state = {
   currentView: 'grid',
   minRating: 0,
   isLoading: false,
+  outreachTemplate: '',
+  removeDuplicates: true,
 };
 
 const ACTOR_ID = 'compass~crawler-google-places';
@@ -36,6 +38,32 @@ document.addEventListener('DOMContentLoaded', () => {
   if (localStorage.getItem('sidebar_collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
   }
+
+  // Restore Template and Deduplication state
+  const savedTemplate = localStorage.getItem('outreach_template');
+  if (savedTemplate) {
+    $('outreachTemplate').value = savedTemplate;
+    state.outreachTemplate = savedTemplate;
+  }
+  
+  const savedDedup = localStorage.getItem('remove_duplicates');
+  if (savedDedup !== null) {
+    const isDedup = savedDedup === 'true';
+    $('removeDuplicatesToggle').checked = isDedup;
+    state.removeDuplicates = isDedup;
+  }
+  
+  // Setup outreach listeners
+  $('outreachTemplate').addEventListener('input', (e) => {
+    state.outreachTemplate = e.target.value;
+    localStorage.setItem('outreach_template', state.outreachTemplate);
+  });
+
+  $('removeDuplicatesToggle').addEventListener('change', (e) => {
+    state.removeDuplicates = e.target.checked;
+    localStorage.setItem('remove_duplicates', state.removeDuplicates);
+    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
+  });
 });
 
 // ─── Range Slider ────────────────────────────────────────────
@@ -301,6 +329,14 @@ function createLeadCard(lead, idx) {
       </div>`
     : '';
 
+  const waBtn = lead.phone 
+    ? `<button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
+        </svg> WhatsApp
+      </button>`
+    : '';
+
   const websiteHtml = lead.website
     ? `<div class="card-detail-row">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -348,7 +384,7 @@ function createLeadCard(lead, idx) {
       ${websiteHtml}
       ${addressHtml}
     </div>
-    ${(mapsBtn || callBtn) ? `<div class="card-actions">${callBtn}${mapsBtn}</div>` : ''}
+    ${(mapsBtn || callBtn || waBtn) ? `<div class="card-actions">${waBtn}${callBtn}${mapsBtn}</div>` : ''}
   `;
 
   return card;
@@ -410,7 +446,35 @@ function setView(view) {
 // ─── Filter ───────────────────────────────────────────────────
 function filterLeads() {
   const query = $('filterInput').value.toLowerCase();
-  state.filteredLeads = state.leads
+  
+  let processedList = state.leads;
+
+  // Deduplication Logic
+  if (state.removeDuplicates) {
+    const uniqueMap = new Map();
+    processedList.forEach(lead => {
+      if (!lead.phone) {
+        // If no phone, treat it as unique or depending on strategy, we keep it. We'll keep it using its internal ID (num).
+        uniqueMap.set(`nophone_${lead.num}`, lead);
+      } else {
+        const existing = uniqueMap.get(lead.phone);
+        if (!existing) {
+          uniqueMap.set(lead.phone, lead);
+        } else {
+          // Both have same phone. Keep the one with more reviews/better score
+          const existingScore = (existing.reviewsCount || 0) * (existing.rating || 1);
+          const currentScore = (lead.reviewsCount || 0) * (lead.rating || 1);
+          if (currentScore > existingScore) {
+             uniqueMap.set(lead.phone, lead);
+          }
+        }
+      }
+    });
+    processedList = Array.from(uniqueMap.values());
+  }
+
+
+  state.filteredLeads = processedList
     .filter(l => state.minRating === 0 || (l.rating !== null && l.rating >= state.minRating))
     .filter(l => {
       if (!query) return true;
@@ -422,9 +486,61 @@ function filterLeads() {
       );
     });
 
+  // Need to update the visual 'num' after filtering dynamically
+  state.filteredLeads = state.filteredLeads.map((l, i) => ({ ...l, num: i + 1 }));
+
   renderGridView();
   renderTableView();
   $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
+}
+
+// ─── Outreach Engine ──────────────────────────────────────────
+function generateMessageTemplate(lead) {
+  let template = state.outreachTemplate || 'Hi [Name], I noticed your business on Google Maps.';
+  
+  const safeStr = (val) => val ? String(val) : '';
+  
+  template = template.replace(/\[Name\]/ig, safeStr(lead.name));
+  template = template.replace(/\[Category\]/ig, safeStr(lead.category));
+  template = template.replace(/\[Reviews\]/ig, safeStr(lead.reviewsCount));
+  
+  const ratingStr = lead.rating !== null ? lead.rating.toFixed(1) : '';
+  template = template.replace(/\[Stars\]/ig, ratingStr);
+
+  return template;
+}
+
+function openWhatsApp(phone, leadIdx) {
+  
+  if (!state.outreachTemplate) {
+    showToast('⚠️ Please write a WhatsApp Template first!', 'warning');
+    // Briefly highlight the textarea
+    const ta = $('outreachTemplate');
+    if (!document.body.classList.contains('sidebar-collapsed')) {
+       ta.focus();
+       ta.style.borderColor = 'var(--accent-rose)';
+       setTimeout(() => ta.style.borderColor = '', 1500);
+    }
+    return;
+  }
+
+  // Get the actual filtered lead
+  const lead = state.filteredLeads[leadIdx];
+  if (!lead) return; // defensive
+
+  // Format phone number (remove non-digits, keep leading + if exists)
+  let cleanPhone = phone.replace(/[^\d+]/g, '');
+  
+  // If it starts with a plus, it's perfect. If not, and we are searching a specific country, 
+  // it might lack the country code, but WA handles mostly well. For safety:
+  if (!cleanPhone.startsWith('+')) {
+    // Basic sanitization
+    cleanPhone = cleanPhone.replace(/^0+/, ''); 
+  }
+
+  const message = generateMessageTemplate(lead);
+  const encodedMsg = encodeURIComponent(message);
+  openUrl(`https://wa.me/${cleanPhone}?text=${encodedMsg}`);
 }
 
 // ─── Export to CSV ────────────────────────────────────────────

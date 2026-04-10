@@ -159,6 +159,43 @@
         </select>
       </div>
 
+      </div>
+
+      <div class="divider"></div>
+
+      <!-- Outreach Engine Settings -->
+      <div class="sidebar-title">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+        </svg>
+        Outreach Engine
+      </div>
+
+      <!-- Deduplication Toggle -->
+      <div class="form-section">
+        <label class="switch-container">
+          <input type="checkbox" id="removeDuplicatesToggle" checked>
+          <span class="switch-slider"></span>
+          <span class="switch-label">Remove Duplicate Phones</span>
+        </label>
+        <div class="input-hint">Keeps the profile with most reviews.</div>
+      </div>
+
+      <!-- Template Editor -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 20h9"></path>
+            <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+          </svg>
+          WhatsApp Template
+        </div>
+        <textarea id="outreachTemplate" class="form-input form-textarea" rows="6" placeholder="Hi [Name], I noticed your [Reviews] reviews..."></textarea>
+        <div class="input-hint template-helpers">
+          Use: <code>[Name]</code>, <code>[Category]</code>, <code>[Reviews]</code>, <code>[Stars]</code>
+        </div>
+      </div>
+
       <!-- Generate Button -->
       <button class="generate-btn" id="generateBtn" onclick="generateLeads()">
         <span class="btn-content" id="btnContent">
