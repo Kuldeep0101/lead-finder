@@ -237,6 +237,42 @@ body {
 }
 
 .form-section { margin-bottom: 20px; }
+.form-section.hidden { display: none; }
+
+.recent-searches-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.search-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  padding: 8px 12px;
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: var(--transition);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.search-pill:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--border-accent);
+  color: var(--text-primary);
+}
+.search-pill-query {
+  font-weight: 500;
+  color: var(--text-primary);
+}
+.search-pill-meta {
+  font-size: 0.7rem;
+  color: var(--text-muted);
+  display: flex;
+  justify-content: space-between;
+}
 
 .section-label {
   font-size: 0.8rem;

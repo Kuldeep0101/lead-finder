@@ -93,11 +93,13 @@ document.addEventListener('DOMContentLoaded', () => {
     state.supabaseUrl = e.target.value.trim();
     localStorage.setItem('supabase_url', state.supabaseUrl);
     fetchContactedFromDB(); // Attempt sync when updated
+    fetchSearchHistoryFromDB();
   });
   $('supabaseKey').addEventListener('input', (e) => {
     state.supabaseKey = e.target.value.trim();
     localStorage.setItem('supabase_key', state.supabaseKey);
     fetchContactedFromDB(); // Attempt sync when updated
+    fetchSearchHistoryFromDB();
   });
   
   // Toggle DB key visibility
@@ -109,6 +111,7 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial sync attempt
   if (state.supabaseUrl && state.supabaseKey) {
     fetchContactedFromDB();
+    fetchSearchHistoryFromDB();
   }
 });
 
@@ -245,6 +248,11 @@ async function generateLeads() {
     state.isLoading = false;
 
     showToast(`✅ Found ${state.filteredLeads.length} leads!`);
+
+    // Save to search history if Supabase is connected
+    if (state.supabaseUrl && state.supabaseKey) {
+      saveSearchToDB(searchQuery, locationQuery);
+    }
 
   } catch (err) {
     console.error(err);
@@ -682,6 +690,100 @@ async function markContactedInDB(lead) {
   } catch (err) {
     console.warn('Supabase sync failed (post):', err);
   }
+}
+
+async function fetchSearchHistoryFromDB() {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
+  
+  try {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&order=created_at.desc&limit=5`, {
+      method: 'GET',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      renderSearchHistory(data);
+    }
+  } catch (err) {
+    console.warn('Supabase search history fetch failed:', err);
+  }
+}
+
+async function saveSearchToDB(query, location) {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
+
+  try {
+    await fetch(`${state.supabaseUrl}/rest/v1/search_history`, {
+      method: 'POST',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        search_query: query,
+        location_query: location
+      })
+    });
+    // refresh history list after saving
+    fetchSearchHistoryFromDB();
+  } catch (err) {
+    console.warn('Supabase search history save failed:', err);
+  }
+}
+
+function renderSearchHistory(historyItems) {
+  const container = $('recentSearchesSection');
+  const list = $('recentSearchesList');
+  
+  if (!historyItems || historyItems.length === 0) {
+    container.classList.add('hidden');
+    return;
+  }
+  
+  list.innerHTML = '';
+  container.classList.remove('hidden');
+
+  historyItems.forEach(item => {
+    const pill = document.createElement('div');
+    pill.className = 'search-pill';
+    
+    // Calculate relative time or simple date formatting
+    const date = new Date(item.created_at);
+    const dateStr = date.toLocaleDateString();
+
+    pill.innerHTML = `
+      <div class="search-pill-query">${escapeHtml(item.search_query)}</div>
+      <div class="search-pill-meta">
+        <span class="location-text">
+          <svg width="10" height="10" style="margin-right:2px; vertical-align:middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+          </svg>
+          ${escapeHtml(item.location_query)}
+        </span>
+        <span class="time-text">${dateStr}</span>
+      </div>
+    `;
+
+    // Click to replay search
+    pill.addEventListener('click', () => {
+      $('searchQuery').value = item.search_query;
+      $('locationQuery').value = item.location_query;
+      // highlight them briefly
+      $('searchQuery').style.borderColor = 'var(--accent-secondary)';
+      $('locationQuery').style.borderColor = 'var(--accent-secondary)';
+      setTimeout(() => {
+        $('searchQuery').style.borderColor = '';
+        $('locationQuery').style.borderColor = '';
+      }, 800);
+    });
+
+    list.appendChild(pill);
+  });
 }
 
 // ─── Export to CSV ────────────────────────────────────────────
