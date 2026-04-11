@@ -13,11 +13,13 @@ const state = {
   minRating: 0,
   isLoading: false,
   outreachTemplate: '',
+  outreachFollowupTemplate: '',
   removeDuplicates: true,
   contactedPhones: new Set(),
   currentOutreachLead: null,
   supabaseUrl: '',
   supabaseKey: '',
+  followups: [],
 };
 
 const ACTOR_ID = 'compass~crawler-google-places';
@@ -49,6 +51,11 @@ document.addEventListener('DOMContentLoaded', () => {
     $('outreachTemplate').value = savedTemplate;
     state.outreachTemplate = savedTemplate;
   }
+  const savedFollowupTemplate = localStorage.getItem('outreach_followup_template');
+  if (savedFollowupTemplate) {
+    $('outreachFollowupTemplate').value = savedFollowupTemplate;
+    state.outreachFollowupTemplate = savedFollowupTemplate;
+  }
   
   const savedDedup = localStorage.getItem('remove_duplicates');
   if (savedDedup !== null) {
@@ -61,6 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
   $('outreachTemplate').addEventListener('input', (e) => {
     state.outreachTemplate = e.target.value;
     localStorage.setItem('outreach_template', state.outreachTemplate);
+  });
+  $('outreachFollowupTemplate').addEventListener('input', (e) => {
+    state.outreachFollowupTemplate = e.target.value;
+    localStorage.setItem('outreach_followup_template', state.outreachFollowupTemplate);
   });
 
   $('removeDuplicatesToggle').addEventListener('change', (e) => {
@@ -491,17 +502,28 @@ function setView(view) {
   const table = $('tableWrapper');
   const gridBtn = $('viewGrid');
   const tableBtn = $('viewTable');
+  const followBtn = $('viewFollowups');
 
   if (view === 'grid') {
+    showState('results');
     grid.classList.remove('hidden');
     table.classList.add('hidden');
     gridBtn.classList.add('active');
     tableBtn.classList.remove('active');
-  } else {
+    if (followBtn) followBtn.classList.remove('active');
+  } else if (view === 'table') {
+    showState('results');
     grid.classList.add('hidden');
     table.classList.remove('hidden');
     tableBtn.classList.add('active');
     gridBtn.classList.remove('active');
+    if (followBtn) followBtn.classList.remove('active');
+  } else if (view === 'followups') {
+    showState('followups');
+    if (followBtn) followBtn.classList.add('active');
+    gridBtn.classList.remove('active');
+    tableBtn.classList.remove('active');
+    fetchFollowUpsFromDB();
   }
 }
 
@@ -692,6 +714,123 @@ async function markContactedInDB(lead) {
   }
 }
 
+// ─── Follow-up CRM Logic ─────────────────────────────────────────
+
+async function fetchFollowUpsFromDB() {
+  if (!state.supabaseUrl || !state.supabaseKey) {
+    $('followupsSubtitle').textContent = "Connect Supabase to load follow-ups!";
+    return;
+  }
+  
+  $('followupsSubtitle').textContent = "Loading follow-ups...";
+  
+  try {
+    // Select everything, ordered by oldest contacted first so we can ping them
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
+      method: 'GET',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`
+      }
+    });
+
+    if (res.ok) {
+      const data = await res.json();
+      state.followups = data;
+      renderFollowUpsView();
+      $('followupsSubtitle').textContent = `${data.length} Leads to follow up with`;
+    }
+  } catch (err) {
+    console.warn('Supabase follow-up fetch failed:', err);
+    $('followupsSubtitle').textContent = "Failed to load follow-ups.";
+  }
+}
+
+function renderFollowUpsView() {
+  const grid = $('followupsGrid');
+  grid.innerHTML = '';
+  
+  if (!state.followups || state.followups.length === 0) {
+    grid.innerHTML = `<div style="color:var(--text-muted); padding:20px;">No contacted leads found yet. Send your first outreach to start!</div>`;
+    return;
+  }
+  
+  state.followups.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'followup-card';
+    
+    const date = new Date(item.contacted_at);
+    // Nice friendly date
+    const dateStr = date.toLocaleDateString() + ' @ ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    
+    // Safety check if column doesn't exist yet
+    const count = item.followups_sent || 0;
+    
+    const countBadge = count > 0 
+      ? `<span class="followup-badge" style="color:var(--accent-secondary); border-color:var(--accent-secondary)">Followed up: ${count}x</span>`
+      : `<span class="followup-badge">Followups: 0</span>`;
+    
+    card.innerHTML = `
+      <div class="followup-name">${escapeHtml(item.name || 'Unknown Business')}</div>
+      <div class="followup-meta">
+        <div>📞 ${escapeHtml(item.phone)}</div>
+        <div class="followup-date">Last contact: ${dateStr}</div>
+      </div>
+      <div>${countBadge}</div>
+      <button class="modal-btn send-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
+        <svg fill="currentColor" viewBox="0 0 24 24" width="16" height="16">
+          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+        </svg> Send Follow-up
+      </button>
+    `;
+    
+    grid.appendChild(card);
+  });
+}
+
+function sendFollowUpMessage(id, phone, name, currentCount) {
+  const template = $('outreachFollowupTemplate').value;
+  if (!template.trim()) {
+    return showToast('⚠️ Please enter a Follow-up template first', 'warning');
+  }
+
+  // Replace variable
+  const finalMessage = template.replace(/\[Name\]/ig, name || 'there');
+    
+  // Format phone
+  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  
+  // Async update db to refresh the timer and increment the count
+  updateFollowUpInDB(id, currentCount + 1);
+  
+  // Open WA
+  const encodedMsg = encodeURIComponent(finalMessage);
+  openUrl(`https://wa.me/${cleanPhone}?text=${encodedMsg}`);
+}
+
+async function updateFollowUpInDB(id, newCount) {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
+  try {
+    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({ 
+        followups_sent: newCount,
+        contacted_at: new Date().toISOString()
+      })
+    });
+    // refresh the view
+    fetchFollowUpsFromDB();
+  } catch(e) {
+    console.warn("Failed to update followup", e);
+  }
+}
+
+
 async function fetchSearchHistoryFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) return;
   
@@ -837,10 +976,10 @@ function exportCSV() {
 
 // ─── UI State Helpers ─────────────────────────────────────────
 function showState(which) {
-  ['emptyState', 'loadingState', 'resultsArea', 'errorState'].forEach(id => {
+  ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea'].forEach(id => {
     $(id).classList.add('hidden');
   });
-  const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState' };
+  const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea' };
   $(map[which]).classList.remove('hidden');
 }
 
