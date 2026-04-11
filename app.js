@@ -251,7 +251,7 @@ async function generateLeads() {
 
     // Save to search history if Supabase is connected
     if (state.supabaseUrl && state.supabaseKey) {
-      saveSearchToDB(searchQuery, locationQuery);
+      saveSearchToDB(searchQuery, locationQuery, processed);
     }
 
   } catch (err) {
@@ -713,7 +713,7 @@ async function fetchSearchHistoryFromDB() {
   }
 }
 
-async function saveSearchToDB(query, location) {
+async function saveSearchToDB(query, location, resultsData = null) {
   if (!state.supabaseUrl || !state.supabaseKey) return;
 
   try {
@@ -726,7 +726,8 @@ async function saveSearchToDB(query, location) {
       },
       body: JSON.stringify({ 
         search_query: query,
-        location_query: location
+        location_query: location,
+        results_data: resultsData
       })
     });
     // refresh history list after saving
@@ -756,6 +757,11 @@ function renderSearchHistory(historyItems) {
     const date = new Date(item.created_at);
     const dateStr = date.toLocaleDateString();
 
+    const isCached = item.results_data && Array.isArray(item.results_data);
+    const cachedBadge = isCached 
+      ? `<span style="color:var(--accent-secondary); margin-left:6px;" title="Loads instantly without spending credits">⚡ Cached</span>` 
+      : '';
+
     pill.innerHTML = `
       <div class="search-pill-query">${escapeHtml(item.search_query)}</div>
       <div class="search-pill-meta">
@@ -765,7 +771,7 @@ function renderSearchHistory(historyItems) {
           </svg>
           ${escapeHtml(item.location_query)}
         </span>
-        <span class="time-text">${dateStr}</span>
+        <span class="time-text">${dateStr}${cachedBadge}</span>
       </div>
     `;
 
@@ -773,13 +779,24 @@ function renderSearchHistory(historyItems) {
     pill.addEventListener('click', () => {
       $('searchQuery').value = item.search_query;
       $('locationQuery').value = item.location_query;
-      // highlight them briefly
-      $('searchQuery').style.borderColor = 'var(--accent-secondary)';
-      $('locationQuery').style.borderColor = 'var(--accent-secondary)';
-      setTimeout(() => {
-        $('searchQuery').style.borderColor = '';
-        $('locationQuery').style.borderColor = '';
-      }, 800);
+      
+      if (item.results_data && Array.isArray(item.results_data)) {
+        // Load dynamically from cache
+        state.leads = item.results_data;
+        filterLeads();
+        updateResultsMeta(item.search_query, item.location_query, state.filteredLeads.length);
+        $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
+        showState('results');
+        showToast(`⚡ Loaded ${state.filteredLeads.length} results from cache!`);
+      } else {
+        // Just fill the inputs if no cache exists
+        $('searchQuery').style.borderColor = 'var(--accent-secondary)';
+        $('locationQuery').style.borderColor = 'var(--accent-secondary)';
+        setTimeout(() => {
+          $('searchQuery').style.borderColor = '';
+          $('locationQuery').style.borderColor = '';
+        }, 800);
+      }
     });
 
     list.appendChild(pill);
