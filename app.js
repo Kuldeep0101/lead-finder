@@ -588,6 +588,12 @@ function buildStars(rating) {
 
 // ─── View Toggle ─────────────────────────────────────────────
 function setView(view) {
+  if ((view === 'grid' || view === 'table') && state.leads.length === 0) {
+    showToast('ℹ️ No scraped leads yet. Generate leads or select a recent search!', 'info');
+    showState('empty');
+    return;
+  }
+
   state.currentView = view;
   const grid = $('leadsGrid');
   const table = $('tableWrapper');
@@ -1093,12 +1099,37 @@ function exportCSV() {
 }
 
 // ─── UI State Helpers ─────────────────────────────────────────
+function updateNavTabs(activeTabId) {
+  ['tabSearch', 'tabResults', 'tabFollowups'].forEach(id => {
+    const el = $(id);
+    if (el) el.classList.remove('active');
+  });
+  const activeEl = $(activeTabId);
+  if (activeEl) activeEl.classList.add('active');
+
+  // Update counts on tab badges
+  if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
+  if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.contactedPhones.size;
+}
+
+function goBackToPreviousView() {
+  if (state.leads && state.leads.length > 0) {
+    showState('results');
+  } else {
+    showState('empty');
+  }
+}
+
 function showState(which) {
   ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea'].forEach(id => {
-    $(id).classList.add('hidden');
+    if ($(id)) $(id).classList.add('hidden');
   });
   const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea' };
-  $(map[which]).classList.remove('hidden');
+  if ($(map[which])) $(map[which]).classList.remove('hidden');
+
+  if (which === 'empty') updateNavTabs('tabSearch');
+  if (which === 'results') updateNavTabs('tabResults');
+  if (which === 'followups') updateNavTabs('tabFollowups');
 }
 
 function setBtnLoading(loading) {
