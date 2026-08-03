@@ -208,6 +208,12 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchContactedFromDB();
     fetchSearchHistoryFromDB();
   }
+
+  // Restore active session if refreshed
+  const restored = restoreActiveSession();
+  if (restored) {
+    showToast(`⚡ Restored ${state.filteredLeads.length} leads from last session!`);
+  }
 });
 
 // ─── Range Slider ────────────────────────────────────────────
@@ -333,6 +339,9 @@ async function generateLeads() {
     setProgress(100);
     await sleep(400);
 
+    // Save session to localStorage so accidental refresh never loses it!
+    saveActiveSession(searchQuery, locationQuery, processed);
+
     // Show results
     renderGridView();
     renderTableView();
@@ -358,7 +367,120 @@ async function generateLeads() {
   }
 }
 
-// ─── Apify API Calls ─────────────────────────────────────────
+// ─── Import & Session Persistence ──────────────────────────────
+function openImportModal() {
+  $('importModal').classList.remove('hidden');
+}
+
+function closeImportModal() {
+  $('importModal').classList.add('hidden');
+}
+
+async function confirmImportDataset() {
+  const inputVal = $('importDatasetId').value.trim();
+  const apiKey = $('apifyApiKey').value.trim();
+
+  if (!inputVal) {
+    return showToast('⚠️ Please enter a Dataset ID or URL', 'warning');
+  }
+  if (!apiKey) {
+    return showToast('⚠️ Please enter your Apify API key in the sidebar', 'warning');
+  }
+
+  let datasetId = inputVal;
+  const match = inputVal.match(/datasets\/([a-zA-Z0-9_-]+)/);
+  if (match && match[1]) {
+    datasetId = match[1];
+  }
+
+  try {
+    showToast('⏳ Fetching dataset from Apify...');
+    const rawLeads = await fetchDataset(apiKey, datasetId);
+    
+    if (!rawLeads || rawLeads.length === 0) {
+      return showToast('⚠️ No items found in this dataset', 'warning');
+    }
+
+    const processed = processLeads(rawLeads);
+    state.leads = processed;
+    
+    saveActiveSession('Imported Dataset', datasetId, processed);
+
+    if (state.supabaseUrl && state.supabaseKey) {
+      saveSearchToDB(`Imported (${datasetId})`, 'Apify Dataset', processed);
+    }
+
+    filterLeads();
+    closeImportModal();
+    updateResultsMeta('Imported Dataset', datasetId, state.filteredLeads.length);
+    showState('results');
+    showToast(`✅ Successfully imported ${processed.length} leads!`);
+  } catch (err) {
+    console.error(err);
+    showToast(`❌ Failed to import: ${err.message || 'Check Dataset ID and API key'}`, 'error');
+  }
+}
+
+function handleJsonFileUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const raw = JSON.parse(e.target.result);
+      const rawLeads = Array.isArray(raw) ? raw : [raw];
+      
+      const processed = processLeads(rawLeads);
+      state.leads = processed;
+      
+      saveActiveSession('JSON File', file.name, processed);
+      filterLeads();
+      closeImportModal();
+      updateResultsMeta('Imported File', file.name, state.filteredLeads.length);
+      showState('results');
+      showToast(`✅ Loaded ${processed.length} leads from JSON file!`);
+    } catch (err) {
+      showToast('❌ Invalid JSON file format', 'error');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function saveActiveSession(query, location, leads) {
+  try {
+    const sessionData = {
+      query: query || 'Scraped Leads',
+      location: location || '',
+      leads: leads,
+      timestamp: Date.now()
+    };
+    localStorage.setItem('leadmapper_active_session', JSON.stringify(sessionData));
+  } catch (e) {
+    console.warn('Could not cache session to localStorage', e);
+  }
+}
+
+function restoreActiveSession() {
+  const saved = localStorage.getItem('leadmapper_active_session');
+  if (!saved) return false;
+
+  try {
+    const session = JSON.parse(saved);
+    if (session && session.leads && Array.isArray(session.leads) && session.leads.length > 0) {
+      state.leads = session.leads;
+      if (session.query && $('searchQuery')) $('searchQuery').value = session.query;
+      if (session.location && $('locationQuery')) $('locationQuery').value = session.location;
+      filterLeads();
+      updateResultsMeta(session.query || 'Saved Search', session.location || '', state.filteredLeads.length);
+      showState('results');
+      return true;
+    }
+  } catch (e) {
+    console.warn('Failed to restore active session', e);
+  }
+  return false;
+}
 async function startApifyRun(apiKey, input) {
   const url = `https://api.apify.com/v2/acts/${ACTOR_ID}/runs?token=${apiKey}`;
 

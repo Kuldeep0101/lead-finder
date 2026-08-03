@@ -357,19 +357,30 @@
         </div>
       </div>
 
-      <!-- Generate Button -->
-      <button class="generate-btn" id="generateBtn" onclick="generateLeads()">
-        <span class="btn-content" id="btnContent">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+      <!-- Actions Section -->
+      <div class="sidebar-action-group">
+        <button class="generate-btn" id="generateBtn" onclick="generateLeads()">
+          <span class="btn-content" id="btnContent">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>
+            Generate Leads
+          </span>
+          <span class="btn-loader hidden" id="btnLoader">
+            <span class="spinner"></span>
+            Scraping…
+          </span>
+        </button>
+
+        <button class="secondary-btn" id="importDatasetBtn" onclick="openImportModal()" title="Import existing Apify Dataset ID or JSON">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
           </svg>
-          Generate Leads
-        </span>
-        <span class="btn-loader hidden" id="btnLoader">
-          <span class="spinner"></span>
-          Scraping…
-        </span>
-      </button>
+          Import Dataset ID
+        </button>
+      </div>
 
       <div class="sidebar-footer">
         <div class="stat-pill" id="totalCount">
@@ -607,6 +618,45 @@
             <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
           </svg>
           Send to WhatsApp
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Import Apify Dataset Modal -->
+  <div class="modal-overlay hidden" id="importModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Import Apify Dataset</h3>
+        <button class="modal-close" onclick="closeImportModal()" title="Close">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-section">
+          <div class="section-label">Apify Dataset ID or URL</div>
+          <input type="text" id="importDatasetId" class="form-input" placeholder="e.g. SDRJJ2mlXdEiBg0Rn" />
+          <div class="input-hint">Paste Dataset ID from Apify Console to load scraped data without re-scraping!</div>
+        </div>
+        <div class="divider" style="margin: 16px 0;"></div>
+        <div class="form-section" style="margin-bottom: 0;">
+          <div class="section-label">Or Upload Exported JSON File</div>
+          <input type="file" id="importJsonFile" class="form-input" accept=".json" onchange="handleJsonFileUpload(event)" />
+          <div class="input-hint">Upload a .json dataset file downloaded from Apify.</div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="modal-btn cancel-btn" onclick="closeImportModal()">Cancel</button>
+        <button class="modal-btn send-btn" id="confirmImportBtn" onclick="confirmImportDataset()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+          Import Dataset
         </button>
       </div>
     </div>
