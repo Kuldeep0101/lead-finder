@@ -92,6 +92,10 @@ document.addEventListener('DOMContentLoaded', () => {
   const saved = localStorage.getItem('apify_api_key');
   if (saved) $('apifyApiKey').value = saved;
 
+  $('apifyApiKey').addEventListener('input', (e) => {
+    localStorage.setItem('apify_api_key', e.target.value.trim());
+  });
+
   // Restore sidebar state
   if (localStorage.getItem('sidebar_collapsed') === 'true') {
     document.body.classList.add('sidebar-collapsed');
@@ -1116,7 +1120,7 @@ async function fetchSearchHistoryFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) return;
   
   try {
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&order=created_at.desc&limit=5`, {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&order=created_at.desc&limit=10`, {
       method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
@@ -1127,9 +1131,55 @@ async function fetchSearchHistoryFromDB() {
     if (res.ok) {
       const data = await res.json();
       renderSearchHistory(data);
+
+      // Cross-device automatic cloud restoration:
+      // If mobile or new device has no leads loaded locally yet, automatically load the latest dataset from Supabase!
+      if ((!state.leads || state.leads.length === 0) && data.length > 0) {
+        const latest = data.find(item => item.results_data && Array.isArray(item.results_data) && item.results_data.length > 0);
+        if (latest) {
+          state.leads = latest.results_data;
+          if ($('searchQuery')) $('searchQuery').value = latest.search_query || '';
+          if ($('locationQuery')) $('locationQuery').value = latest.location_query || '';
+          filterLeads();
+          updateResultsMeta(latest.search_query || 'Cloud Sync', latest.location_query || 'Supabase', state.filteredLeads.length);
+          showState('results');
+          saveActiveSession(latest.search_query, latest.location_query, latest.results_data);
+          showToast(`☁️ Synced ${state.filteredLeads.length} leads from Supabase!`);
+        }
+      }
     }
   } catch (err) {
     console.warn('Supabase search history fetch failed:', err);
+  }
+}
+
+async function saveLeadsToScrapedLeadsTable(leads) {
+  if (!state.supabaseUrl || !state.supabaseKey || !leads || leads.length === 0) return;
+
+  try {
+    const rows = leads.map(l => ({
+      name: l.name || 'Unknown Business',
+      category: l.category || '—',
+      rating: l.rating ?? null,
+      reviews_count: l.reviewsCount ?? 0,
+      phone: l.phone || null,
+      website: l.website || null,
+      address: l.address || null,
+      google_maps_url: l.googleMapsUrl || null
+    }));
+
+    await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads`, {
+      method: 'POST',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=ignore-duplicates'
+      },
+      body: JSON.stringify(rows)
+    });
+  } catch (err) {
+    console.warn('Supabase scraped_leads table insert notice:', err);
   }
 }
 
@@ -1150,6 +1200,11 @@ async function saveSearchToDB(query, location, resultsData = null) {
         results_data: resultsData
       })
     });
+
+    if (resultsData && Array.isArray(resultsData)) {
+      saveLeadsToScrapedLeadsTable(resultsData);
+    }
+
     // refresh history list after saving
     fetchSearchHistoryFromDB();
   } catch (err) {
