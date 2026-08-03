@@ -881,8 +881,22 @@ function closeOutreachModal() {
 function confirmSendMessage() {
   if (!state.currentOutreachLead) return;
 
-  const finalPhone = $('modalPhone').value.trim().replace(/[^\d+]/g, '');
+  const rawPhone = $('modalPhone').value;
   const finalMessage = $('modalMessage').value;
+
+  // Clean phone number to digits only (WhatsApp requires digits only, NO + sign)
+  const cleanDigits = rawPhone.replace(/\D/g, '');
+
+  if (!cleanDigits) {
+    return showToast('⚠️ Invalid phone number format', 'warning');
+  }
+
+  // Construct direct WhatsApp URL (api.whatsapp.com works on Web, Desktop & Mobile)
+  const encodedMsg = encodeURIComponent(finalMessage);
+  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
+
+  // Launch WhatsApp immediately
+  openUrl(waUrl);
 
   // Mark as contacted locally immediately for snappy UI
   if (state.currentOutreachLead.phone) {
@@ -900,9 +914,7 @@ function confirmSendMessage() {
   }
 
   closeOutreachModal();
-
-  const encodedMsg = encodeURIComponent(finalMessage);
-  openUrl(`https://wa.me/${finalPhone}?text=${encodedMsg}`);
+  showToast('🚀 Launching WhatsApp message...');
 }
 
 // ─── Cloud Database (Supabase) ────────────────────────────────
@@ -1043,15 +1055,19 @@ function sendFollowUpMessage(id, phone, name, currentCount) {
   // Replace variable
   const finalMessage = template.replace(/\[Name\]/ig, name || 'there');
     
-  // Format phone
-  const cleanPhone = phone.replace(/[^\d+]/g, '');
+  // Format phone to digits only (strip + sign and spaces)
+  const cleanDigits = (phone || '').replace(/\D/g, '');
+  if (!cleanDigits) {
+    return showToast('⚠️ Invalid phone number for WhatsApp', 'warning');
+  }
   
   // Async update db to refresh the timer and increment the count
   updateFollowUpInDB(id, currentCount + 1);
   
   // Open WA
   const encodedMsg = encodeURIComponent(finalMessage);
-  openUrl(`https://wa.me/${cleanPhone}?text=${encodedMsg}`);
+  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
+  openUrl(waUrl);
 }
 
 async function updateFollowUpInDB(id, newCount) {
@@ -1317,7 +1333,11 @@ function copyText(text, successMsg = 'Copied!') {
 }
 
 function openUrl(url) {
-  window.open(url, '_blank', 'noopener,noreferrer');
+  const win = window.open(url, '_blank');
+  if (!win || win.closed || typeof win.closed === 'undefined') {
+    // Fallback if browser blocked popup window
+    window.location.href = url;
+  }
 }
 
 function sleep(ms) {
