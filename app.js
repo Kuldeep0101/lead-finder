@@ -11,6 +11,8 @@ const state = {
   filteredLeads: [],
   currentView: 'grid',
   minRating: 0,
+  onlyWithoutWebsite: false,
+  onlyContacted: false,
   isLoading: false,
   outreachTemplate: '',
   outreachFollowupTemplate: '',
@@ -29,8 +31,58 @@ const MAX_POLL_RETRIES = 90; // ~6 minutes
 // ─── DOM References ──────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
+// ─── Authentication Logic ────────────────────────────────────
+function checkAuth() {
+  const isAuth = localStorage.getItem('leadmapper_authenticated') === 'true';
+  const authOverlay = $('authOverlay');
+  const header = $('header');
+  const mainLayout = document.querySelector('.main-layout');
+
+  if (isAuth) {
+    if (authOverlay) authOverlay.classList.add('hidden');
+    if (header) header.classList.remove('hidden');
+    if (mainLayout) mainLayout.classList.remove('hidden');
+  } else {
+    if (authOverlay) authOverlay.classList.remove('hidden');
+    if (header) header.classList.add('hidden');
+    if (mainLayout) mainLayout.classList.add('hidden');
+  }
+}
+
+function handleAuthSubmit(e) {
+  e.preventDefault();
+  const user = $('authUsername').value.trim();
+  const pass = $('authPassword').value.trim();
+  const errBox = $('authError');
+
+  if (user === 'kennyS007' && pass === 'Ayushman@123') {
+    if (errBox) errBox.classList.add('hidden');
+    localStorage.setItem('leadmapper_authenticated', 'true');
+    checkAuth();
+    showToast('🔓 Access Granted! Welcome, kennyS007');
+  } else {
+    if (errBox) {
+      errBox.classList.remove('hidden');
+      $('authErrorMsg').textContent = 'Invalid username or password. Please try again.';
+    }
+  }
+}
+
+function handleLogout() {
+  localStorage.removeItem('leadmapper_authenticated');
+  checkAuth();
+  showToast('🔒 Signed out successfully');
+}
+
 // ─── Init ────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+
+  $('toggleAuthPassword')?.addEventListener('click', () => {
+    const input = $('authPassword');
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
+  });
+
   initRangeSlider();
   initStarRating();
   initApiKeyToggle();
@@ -63,6 +115,20 @@ document.addEventListener('DOMContentLoaded', () => {
     $('removeDuplicatesToggle').checked = isDedup;
     state.removeDuplicates = isDedup;
   }
+
+  const savedNoWebsite = localStorage.getItem('only_without_website');
+  if (savedNoWebsite !== null) {
+    const isNoWebsite = savedNoWebsite === 'true';
+    $('onlyWithoutWebsiteToggle').checked = isNoWebsite;
+    state.onlyWithoutWebsite = isNoWebsite;
+  }
+
+  const savedOnlyContacted = localStorage.getItem('only_contacted');
+  if (savedOnlyContacted !== null) {
+    const isContacted = savedOnlyContacted === 'true';
+    $('onlyContactedToggle').checked = isContacted;
+    state.onlyContacted = isContacted;
+  }
   
   // Setup outreach listeners
   $('outreachTemplate').addEventListener('input', (e) => {
@@ -80,6 +146,18 @@ document.addEventListener('DOMContentLoaded', () => {
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
   });
 
+  $('onlyWithoutWebsiteToggle').addEventListener('change', (e) => {
+    state.onlyWithoutWebsite = e.target.checked;
+    localStorage.setItem('only_without_website', state.onlyWithoutWebsite);
+    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
+  });
+
+  $('onlyContactedToggle').addEventListener('change', (e) => {
+    state.onlyContacted = e.target.checked;
+    localStorage.setItem('only_contacted', state.onlyContacted);
+    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
+  });
+
   // Restore Contacted history
   const savedContacted = localStorage.getItem('contacted_phones');
   if (savedContacted) {
@@ -88,16 +166,22 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch(e) {}
   }
 
-  // Supabase Restores & Listeners
-  const savedSbUrl = localStorage.getItem('supabase_url');
-  const savedSbKey = localStorage.getItem('supabase_key');
+  // Supabase Restores & Default Credentials
+  const DEFAULT_SUPABASE_URL = 'https://wgfteclxeqsrormimttj.supabase.co';
+  const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZnRlY2x4ZXFzcm9ybWltdHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NDczNDUsImV4cCI6MjEwMTMyMzM0NX0.9mozUxN2cPCsrHsU4jtOWOIPGukLJmyWokg7I_wG13Y';
+
+  const savedSbUrl = localStorage.getItem('supabase_url') || DEFAULT_SUPABASE_URL;
+  const savedSbKey = localStorage.getItem('supabase_key') || DEFAULT_SUPABASE_KEY;
+
   if (savedSbUrl) {
     $('supabaseUrl').value = savedSbUrl;
     state.supabaseUrl = savedSbUrl;
+    localStorage.setItem('supabase_url', savedSbUrl);
   }
   if (savedSbKey) {
     $('supabaseKey').value = savedSbKey;
     state.supabaseKey = savedSbKey;
+    localStorage.setItem('supabase_key', savedSbKey);
   }
 
   $('supabaseUrl').addEventListener('input', (e) => {
@@ -152,6 +236,7 @@ function initStarRating() {
       btns.forEach(b => b.classList.remove('active'));
       btn.classList.add('active');
       state.minRating = parseFloat(btn.dataset.value);
+      if (state.leads.length > 0) filterLeads();
     });
   });
 }
@@ -219,6 +304,7 @@ async function generateLeads() {
       maxCrawledPlacesPerSearch: maxResults,
       language: language,
       includeWebResults: false,
+      onlyWithoutWebsite: state.onlyWithoutWebsite,
     });
 
     // Step 2: Poll for completion
@@ -241,9 +327,8 @@ async function generateLeads() {
 
     const processed = processLeads(rawLeads);
 
-    // Filter by min rating
     state.leads = processed;
-    state.filteredLeads = applyRatingFilter(processed);
+    filterLeads();
 
     setProgress(100);
     await sleep(400);
@@ -418,7 +503,13 @@ function createLeadCard(lead, idx) {
         </svg>
         <a href="https://${lead.website}" target="_blank" rel="noopener" title="${lead.website}">${truncate(lead.website, 30)}</a>
       </div>`
-    : '';
+    : `<div class="card-detail-row no-website-row">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+        <span class="no-website-pill">No Website</span>
+      </div>`;
 
   const addressHtml = lead.address && lead.address !== '—'
     ? `<div class="card-detail-row">
@@ -476,7 +567,7 @@ function renderTableView() {
       <td class="td-rating">${lead.rating !== null ? lead.rating.toFixed(1) + ' ★' : '—'}</td>
       <td>${lead.reviewsCount ? lead.reviewsCount.toLocaleString() : '—'}</td>
       <td>${lead.phone ? escapeHtml(lead.phone) : '—'}</td>
-      <td class="td-link">${lead.website ? `<a href="https://${lead.website}" target="_blank" rel="noopener">${truncate(lead.website, 25)}</a>` : '—'}</td>
+      <td class="td-link">${lead.website ? `<a href="https://${lead.website}" target="_blank" rel="noopener">${truncate(lead.website, 25)}</a>` : '<span class="no-website-pill">No Website</span>'}</td>
       <td title="${escapeHtml(lead.address)}">${truncate(escapeHtml(lead.address), 40)}</td>
     `;
     tbody.appendChild(tr);
@@ -528,6 +619,22 @@ function setView(view) {
 }
 
 // ─── Filter ───────────────────────────────────────────────────
+function toggleNoWebsiteFilter() {
+  state.onlyWithoutWebsite = !state.onlyWithoutWebsite;
+  const toggle = $('onlyWithoutWebsiteToggle');
+  if (toggle) toggle.checked = state.onlyWithoutWebsite;
+  localStorage.setItem('only_without_website', state.onlyWithoutWebsite);
+  filterLeads();
+}
+
+function toggleContactedFilter() {
+  state.onlyContacted = !state.onlyContacted;
+  const toggle = $('onlyContactedToggle');
+  if (toggle) toggle.checked = state.onlyContacted;
+  localStorage.setItem('only_contacted', state.onlyContacted);
+  filterLeads();
+}
+
 function filterLeads() {
   const query = $('filterInput').value.toLowerCase();
   
@@ -557,9 +664,10 @@ function filterLeads() {
     processedList = Array.from(uniqueMap.values());
   }
 
-
   state.filteredLeads = processedList
     .filter(l => state.minRating === 0 || (l.rating !== null && l.rating >= state.minRating))
+    .filter(l => !state.onlyWithoutWebsite || !l.website)
+    .filter(l => !state.onlyContacted || (l.phone && state.contactedPhones.has(l.phone)))
     .filter(l => {
       if (!query) return true;
       return (
@@ -572,6 +680,25 @@ function filterLeads() {
 
   // Need to update the visual 'num' after filtering dynamically
   state.filteredLeads = state.filteredLeads.map((l, i) => ({ ...l, num: i + 1 }));
+
+  // Update Toolbar toggle button active status
+  const noWebBtn = $('toolbarNoWebsiteBtn');
+  if (noWebBtn) {
+    if (state.onlyWithoutWebsite) {
+      noWebBtn.classList.add('active');
+    } else {
+      noWebBtn.classList.remove('active');
+    }
+  }
+
+  const contactedBtn = $('toolbarContactedBtn');
+  if (contactedBtn) {
+    if (state.onlyContacted) {
+      contactedBtn.classList.add('active');
+    } else {
+      contactedBtn.classList.remove('active');
+    }
+  }
 
   renderGridView();
   renderTableView();
@@ -595,17 +722,10 @@ function generateMessageTemplate(lead) {
 }
 
 function openWhatsApp(phone, leadIdx) {
-  
-  if (!state.outreachTemplate) {
-    showToast('⚠️ Please write a WhatsApp Template first!', 'warning');
-    // Briefly highlight the textarea
-    const ta = $('outreachTemplate');
-    if (!document.body.classList.contains('sidebar-collapsed')) {
-       ta.focus();
-       ta.style.borderColor = 'var(--accent-rose)';
-       setTimeout(() => ta.style.borderColor = '', 1500);
-    }
-    return;
+  if (!state.outreachTemplate || !state.outreachTemplate.trim()) {
+    state.outreachTemplate = 'Hi [Name], I noticed your business on Google Maps.';
+    if ($('outreachTemplate')) $('outreachTemplate').value = state.outreachTemplate;
+    localStorage.setItem('outreach_template', state.outreachTemplate);
   }
 
   // Get the actual filtered lead
@@ -615,10 +735,8 @@ function openWhatsApp(phone, leadIdx) {
   state.currentOutreachLead = lead;
 
   // Format phone number (remove non-digits, keep leading + if exists)
-  let cleanPhone = phone.replace(/[^\d+]/g, '');
-  
-  // Basic sanitization
-  if (!cleanPhone.startsWith('+')) cleanPhone = cleanPhone.replace(/^0+/, ''); 
+  let cleanPhone = (phone || '').replace(/[^\d+]/g, '');
+  if (cleanPhone && !cleanPhone.startsWith('+')) cleanPhone = cleanPhone.replace(/^0+/, ''); 
 
   // Pre-fill modal
   $('modalPhone').value = cleanPhone;

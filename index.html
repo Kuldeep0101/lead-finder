@@ -16,6 +16,67 @@
   <div class="bg-orb orb-2"></div>
   <div class="bg-orb orb-3"></div>
 
+  <!-- Access Authorization Screen -->
+  <div class="auth-overlay hidden" id="authOverlay">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="auth-logo-icon">
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <h1 class="auth-title">Lead<span class="accent">Mapper</span> Access</h1>
+        <p class="auth-subtitle">Protected Application — Sign in to continue</p>
+      </div>
+
+      <form id="authForm" onsubmit="handleAuthSubmit(event)">
+        <div id="authError" class="auth-error hidden">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <span id="authErrorMsg">Invalid username or password</span>
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            Username
+          </div>
+          <input type="text" id="authUsername" class="form-input" placeholder="Enter username" required autocomplete="username" />
+        </div>
+
+        <div class="form-section">
+          <div class="section-label">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+            Password
+          </div>
+          <div class="input-wrapper">
+            <input type="password" id="authPassword" class="form-input" placeholder="Enter password" required autocomplete="current-password" />
+            <button type="button" class="toggle-visibility" id="toggleAuthPassword" title="Show/Hide password">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button type="submit" class="generate-btn auth-submit-btn">
+          <span class="btn-content">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
+            </svg>
+            Unlock Dashboard
+          </span>
+        </button>
+      </form>
+    </div>
+  </div>
+
   <!-- Header -->
   <header class="header" id="header">
     <div class="header-inner">
@@ -28,18 +89,32 @@
           </svg>
         </button>
         <div class="logo">
-        <div class="logo-icon">
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
-          </svg>
+          <div class="logo-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
+              <circle cx="12" cy="10" r="3"/>
+            </svg>
+          </div>
+          <span class="logo-text">Lead<span class="accent">Mapper</span></span>
         </div>
-        <span class="logo-text">Lead<span class="accent">Mapper</span></span>
       </div>
-    </div>
-    <div class="header-badge">
-        <span class="badge-dot"></span>
-        Powered by Apify
+      <div class="header-right" id="headerRight">
+        <div class="user-pill">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+          </svg>
+          <span id="headerUsername">kennyS007</span>
+        </div>
+        <button class="logout-btn" id="logoutBtn" onclick="handleLogout()" title="Sign Out">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          Sign Out
+        </button>
+        <div class="header-badge">
+          <span class="badge-dot"></span>
+          Powered by Apify
+        </div>
       </div>
     </div>
   </header>
@@ -179,6 +254,39 @@
         </div>
       </div>
 
+      <!-- Website Filter Toggle -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+            <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+          </svg>
+          Website Filter
+        </div>
+        <label class="switch-container">
+          <input type="checkbox" id="onlyWithoutWebsiteToggle">
+          <span class="switch-slider"></span>
+          <span class="switch-label">Only Businesses Without Website</span>
+        </label>
+        <div class="input-hint">Scrapes & shows only leads missing a website.</div>
+      </div>
+
+      <!-- Contacted Filter Toggle -->
+      <div class="form-section">
+        <div class="section-label">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          Outreach Status Filter
+        </div>
+        <label class="switch-container">
+          <input type="checkbox" id="onlyContactedToggle">
+          <span class="switch-slider"></span>
+          <span class="switch-label">Only Contacted Leads</span>
+        </label>
+        <div class="input-hint">Shows only businesses you have already reached out to.</div>
+      </div>
+
       <!-- Language Filter -->
       <div class="form-section">
         <div class="section-label">
@@ -199,8 +307,6 @@
           <option value="ar">Arabic</option>
           <option value="pt">Portuguese</option>
         </select>
-      </div>
-
       </div>
 
       <div class="divider"></div>
@@ -337,6 +443,19 @@
               </svg>
               <input type="text" id="filterInput" class="filter-input" placeholder="Filter results…" oninput="filterLeads()" />
             </div>
+            <button class="toolbar-chip-btn" id="toolbarNoWebsiteBtn" onclick="toggleNoWebsiteFilter()" title="Show only leads without website">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+              </svg>
+              No Website Only
+            </button>
+            <button class="toolbar-chip-btn green-chip" id="toolbarContactedBtn" onclick="toggleContactedFilter()" title="Show only contacted leads">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="20 6 9 17 4 12"></polyline>
+              </svg>
+              Contacted Only
+            </button>
             <div class="view-toggle">
               <button class="view-btn active" id="viewGrid" onclick="setView('grid')" title="Grid View">
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
