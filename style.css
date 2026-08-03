@@ -1536,28 +1536,246 @@ body {
   color: #f87171;
   border-color: rgba(239, 68, 68, 0.3);
 }
-/* === Responsive === */
-@media (max-width: 900px) {
-  .main-layout { flex-direction: column; }
+/* === Mobile & Tablet Responsiveness (Samsung M12 & Android Optimized) === */
+@media (max-width: 768px) {
+  /* Main Layout */
+  .main-layout {
+    flex-direction: column;
+  }
+
+  /* Header adjustments for 360px-480px screen widths */
+  .header {
+    height: 56px;
+  }
+  .header-inner {
+    padding: 0 12px;
+  }
+  .header-left {
+    gap: 8px;
+  }
+  .logo-icon {
+    width: 30px;
+    height: 30px;
+  }
+  .logo-text {
+    font-size: 1rem;
+  }
+  .header-badge {
+    display: none; /* Hide Apify badge on mobile to maximize user controls room */
+  }
+  .header-right {
+    gap: 6px;
+  }
+  .user-pill {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+  .logout-btn {
+    padding: 4px 8px;
+    font-size: 0.72rem;
+  }
+
+  /* Off-Canvas / Collapsible Sidebar on Mobile */
   .sidebar {
     width: 100%;
-    min-height: unset;
-    height: unset;
-    position: static;
+    min-height: auto;
+    height: auto;
+    position: relative;
+    top: 0;
     border-right: none;
     border-bottom: 1px solid var(--border-subtle);
-    overflow: visible;
+    padding: 16px 14px;
+    gap: 12px;
+    transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.3s ease, padding 0.3s ease;
+    overflow: hidden;
   }
-  .dashboard { padding: 16px; }
-  .toolbar-actions { flex-wrap: wrap; }
-  .filter-input { width: 120px; }
+
+  .sidebar-collapsed .sidebar {
+    max-height: 0;
+    padding: 0 14px;
+    border-bottom: none;
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  /* Dashboard Container */
+  .dashboard {
+    padding: 12px 10px;
+  }
+
+  /* Dashboard Navigation Bar */
+  .dashboard-nav-bar {
+    gap: 6px;
+    margin-bottom: 12px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+  .dash-nav-tab {
+    padding: 8px 12px;
+    font-size: 0.76rem;
+    border-radius: 16px;
+  }
+
+  /* Results Toolbar & Search Controls */
+  .results-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    padding-bottom: 12px;
+  }
+  .results-meta {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .results-title {
+    font-size: 1.1rem;
+  }
+  .toolbar-actions {
+    width: 100%;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .search-filter {
+    flex: 1 1 100%;
+    width: 100%;
+  }
+  .filter-input {
+    width: 100%;
+    font-size: 0.88rem;
+    padding: 9px 0;
+  }
+  .toolbar-chip-btn {
+    flex: 1;
+    justify-content: center;
+    font-size: 0.76rem;
+    padding: 8px 10px;
+  }
+  .export-btn {
+    flex: 1 1 100%;
+    justify-content: center;
+    padding: 10px 14px;
+    font-size: 0.85rem;
+  }
+
+  /* Leads Grid & Thumb-Friendly Cards (Samsung M12 / Mobile UI) */
+  .leads-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .lead-card {
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
+    gap: 10px;
+  }
+
+  .card-name {
+    font-size: 1.02rem;
+  }
+
+  /* Full-width Green WhatsApp Action Button for Android One-Tap Launch */
+  .card-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-top: 6px;
+  }
+
+  .card-action-btn {
+    padding: 11px 14px;
+    font-size: 0.88rem;
+    min-height: 44px; /* Recommended Android touch height */
+    border-radius: 8px;
+    justify-content: center;
+    width: 100%;
+  }
+
+  .card-action-btn.whatsapp-btn {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    color: #ffffff;
+    font-weight: 600;
+    border: none;
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+  }
+
+  .card-action-btn.contacted-btn {
+    background: rgba(16, 212, 142, 0.12);
+    color: #10d48e;
+    border-color: rgba(16, 212, 142, 0.3);
+    font-weight: 600;
+  }
+
+  .card-actions-sub {
+    display: flex;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .card-actions-sub .card-action-btn {
+    flex: 1;
+    min-height: 38px;
+    font-size: 0.78rem;
+  }
+
+  /* Mobile Sheet Modals (Samsung M12 view) */
+  .modal-overlay {
+    padding: 8px;
+    align-items: flex-end;
+  }
+
+  .modal-content {
+    width: 100%;
+    max-width: 100%;
+    padding: 20px 16px;
+    border-bottom-left-radius: 0;
+    border-bottom-right-radius: 0;
+    border-top-left-radius: var(--radius-xl);
+    border-top-right-radius: var(--radius-xl);
+    max-height: 90vh;
+    overflow-y: auto;
+  }
+
+  .modal-header {
+    margin-bottom: 14px;
+  }
+  .modal-title {
+    font-size: 1.15rem;
+  }
+  .modal-body .form-input, 
+  .modal-body .form-textarea {
+    font-size: 0.92rem;
+    padding: 12px;
+  }
+  .modal-footer {
+    flex-direction: column-reverse;
+    gap: 8px;
+  }
+  .modal-btn {
+    width: 100%;
+    min-height: 46px;
+    justify-content: center;
+    font-size: 0.94rem;
+  }
+
+  /* Authentication Form on Mobile */
+  .auth-card {
+    padding: 24px 18px;
+    border-radius: var(--radius-lg);
+  }
+  .auth-title {
+    font-size: 1.35rem;
+  }
 }
 
-@media (max-width: 600px) {
-  .leads-grid { grid-template-columns: 1fr; }
-  .results-toolbar { flex-direction: column; align-items: flex-start; }
-  .toolbar-actions { width: 100%; }
-  .export-btn { flex: 1; justify-content: center; }
+@media (max-width: 400px) {
+  .logo-text {
+    font-size: 0.95rem;
+  }
+  .dash-nav-tab {
+    padding: 6px 10px;
+    font-size: 0.72rem;
+  }
 }
 
 /* Fade in animation for whole page */

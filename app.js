@@ -274,6 +274,17 @@ function initSidebarToggle() {
     const isCollapsed = document.body.classList.contains('sidebar-collapsed');
     localStorage.setItem('sidebar_collapsed', isCollapsed);
   });
+
+  // On mobile devices (<= 768px), default sidebar to collapsed so content is immediately visible
+  if (window.innerWidth <= 768 && localStorage.getItem('sidebar_collapsed') === null) {
+    document.body.classList.add('sidebar-collapsed');
+  }
+}
+
+function collapseSidebarOnMobile() {
+  if (window.innerWidth <= 768) {
+    document.body.classList.add('sidebar-collapsed');
+  }
 }
 
 // ─── Main: Generate Leads ────────────────────────────────────
@@ -349,6 +360,7 @@ async function generateLeads() {
     $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
 
     showState('results');
+    collapseSidebarOnMobile();
     setBtnLoading(false);
     state.isLoading = false;
 
@@ -414,6 +426,7 @@ async function confirmImportDataset() {
     closeImportModal();
     updateResultsMeta('Imported Dataset', datasetId, state.filteredLeads.length);
     showState('results');
+    collapseSidebarOnMobile();
     showToast(`✅ Successfully imported ${processed.length} leads!`);
   } catch (err) {
     console.error(err);
@@ -435,11 +448,17 @@ function handleJsonFileUpload(event) {
       state.leads = processed;
       
       saveActiveSession('JSON File', file.name, processed);
+
+      // Save to Supabase DB if connected
+      if (state.supabaseUrl && state.supabaseKey) {
+        saveSearchToDB(`JSON Upload (${file.name})`, 'Uploaded File', processed);
+      }
+
       filterLeads();
       closeImportModal();
       updateResultsMeta('Imported File', file.name, state.filteredLeads.length);
       showState('results');
-      showToast(`✅ Loaded ${processed.length} leads from JSON file!`);
+      showToast(`✅ Loaded & saved ${processed.length} leads from JSON file!`);
     } catch (err) {
       showToast('❌ Invalid JSON file format', 'error');
     }
@@ -670,7 +689,7 @@ function createLeadCard(lead, idx) {
       ${websiteHtml}
       ${addressHtml}
     </div>
-    ${(mapsBtn || callBtn || waBtn) ? `<div class="card-actions">${waBtn}${callBtn}${mapsBtn}</div>` : ''}
+    ${(mapsBtn || callBtn || waBtn) ? `<div class="card-actions">${waBtn}<div class="card-actions-sub">${callBtn}${mapsBtn}</div></div>` : ''}
   `;
 
   return card;
