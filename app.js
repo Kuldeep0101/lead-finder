@@ -5,7 +5,12 @@
 
 'use strict';
 
-// ─── State ──────────────────────────────────────────────────
+const NICHES = {
+  coaching: { id: 'coaching', name: 'Coaching Institutes', icon: '🎓', defaultQuery: 'NEET IIT JEE SSC Coaching centers', defaultLocation: 'Patna, Bihar, India', template: 'Hi [Name], I noticed your coaching institute in [Location] has [Reviews] reviews. Would you like a high-converting website to double student admissions?', followup: 'Hi [Name], just floating this to the top of your inbox. Let me know if you are open for a quick 2-min demo!' },
+  makeup: { id: 'makeup', name: 'Bridal & Spa', icon: '💄', defaultQuery: 'Bridal makeup artists beauty parlour spa', defaultLocation: 'Mumbai, Maharashtra, India', template: 'Hi [Name], love your bridal portfolio! Noticed you don’t have a online booking website yet. Would you be interested in a customized site to get 30+ new bridal bookings/month?', followup: 'Hi [Name], following up on my previous message. Would love to share a free website mockup for your salon/beauty parlour!' },
+  cardenting: { id: 'cardenting', name: 'Car Decoration & Denting', icon: '🚗', defaultQuery: 'Car denting painting car decoration accessories', defaultLocation: 'Delhi, India', template: 'Hi [Name], I noticed your car denting & decoration shop on Google Maps. We build premium portfolios for auto shops to drive instant calls. Can I share a quick sample?', followup: 'Hi [Name], just following up to check if you have 2 mins to view our car workshop portfolio website demo?' }
+};
+
 const state = {
   leads: [],
   filteredLeads: [],
@@ -24,6 +29,9 @@ const state = {
   supabaseUrl: '',
   supabaseKey: '',
   followups: [],
+  closedDeals: [],
+  activeNiche: localStorage.getItem('active_niche') || 'coaching',
+  customNiches: JSON.parse(localStorage.getItem('custom_niches') || '[]'),
 };
 
 const ACTOR_ID = 'compass~crawler-google-places';
@@ -128,6 +136,21 @@ document.addEventListener('DOMContentLoaded', () => {
     $('onlyWithoutWebsiteToggle').checked = isNoWebsite;
     state.onlyWithoutWebsite = isNoWebsite;
   }
+  
+  loadNicheTemplates(state.activeNiche);
+
+  $('outreachTemplate')?.addEventListener('input', (e) => {
+    state.outreachTemplate = e.target.value;
+    localStorage.setItem(`outreach_template_${state.activeNiche}`, state.outreachTemplate);
+  });
+
+  $('outreachFollowupTemplate')?.addEventListener('input', (e) => {
+    state.outreachFollowupTemplate = e.target.value;
+    localStorage.setItem(`outreach_followup_template_${state.activeNiche}`, state.outreachFollowupTemplate);
+  });
+
+  // Render initial niche pills
+  renderNichePills();
 
   const savedOnlyContacted = localStorage.getItem('only_contacted');
   if (savedOnlyContacted !== null) {
@@ -137,13 +160,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Setup outreach listeners
-  $('outreachTemplate').addEventListener('input', (e) => {
-    state.outreachTemplate = e.target.value;
-    localStorage.setItem('outreach_template', state.outreachTemplate);
-  });
-  $('outreachFollowupTemplate').addEventListener('input', (e) => {
-    state.outreachFollowupTemplate = e.target.value;
-    localStorage.setItem('outreach_followup_template', state.outreachFollowupTemplate);
   });
 
   $('removeDuplicatesToggle').addEventListener('change', (e) => {
@@ -794,6 +810,8 @@ function setView(view) {
     showState('results');
     grid.classList.remove('hidden');
     table.classList.add('hidden');
+    $('followupsArea')?.classList.add('hidden');
+    $('closedDealsArea')?.classList.add('hidden');
     gridBtn.classList.add('active');
     tableBtn.classList.remove('active');
     if (followBtn) followBtn.classList.remove('active');
@@ -801,14 +819,24 @@ function setView(view) {
     showState('results');
     grid.classList.add('hidden');
     table.classList.remove('hidden');
+    $('followupsArea')?.classList.add('hidden');
+    $('closedDealsArea')?.classList.add('hidden');
     tableBtn.classList.add('active');
     gridBtn.classList.remove('active');
     if (followBtn) followBtn.classList.remove('active');
   } else if (view === 'followups') {
     showState('followups');
+    $('followupsArea')?.classList.remove('hidden');
+    $('closedDealsArea')?.classList.add('hidden');
     if (followBtn) followBtn.classList.add('active');
     gridBtn.classList.remove('active');
     tableBtn.classList.remove('active');
+    fetchFollowUpsFromDB();
+  } else if (view === 'closed') {
+    showState('followups');
+    $('followupsArea')?.classList.add('hidden');
+    $('closedDealsArea')?.classList.remove('hidden');
+    if ($('tabClosedDeals')) $('tabClosedDeals').classList.add('active');
     fetchFollowUpsFromDB();
   }
 }
@@ -1028,11 +1056,13 @@ async function markContactedInDB(lead) {
         'apikey': state.supabaseKey,
         'Authorization': `Bearer ${state.supabaseKey}`,
         'Content-Type': 'application/json',
-        'Prefer': 'resolution=ignore-duplicates' // Prevents error if phone already exists (needs unique constraint on DB)
+        'Prefer': 'resolution=ignore-duplicates' // Prevents error if phone already exists
       },
       body: JSON.stringify({ 
         phone: lead.phone,
         name: lead.name,
+        niche: state.activeNiche,
+        status: 'contacted',
         contacted_at: new Date().toISOString()
       })
     });
@@ -1041,19 +1071,105 @@ async function markContactedInDB(lead) {
   }
 }
 
+// ─── Multi-Niche Engine Logic ──────────────────────────────────────
+function switchNiche(nicheKey) {
+  state.activeNiche = nicheKey;
+  localStorage.setItem('active_niche', nicheKey);
+
+  renderNichePills();
+  loadNicheTemplates(nicheKey);
+
+  const config = getNicheConfig(nicheKey);
+  if ($('activeNicheBadge')) $('activeNicheBadge').textContent = `${config.icon} ${config.name} Workspace`;
+  if ($('templateNicheName')) $('templateNicheName').textContent = config.name;
+  if ($('generateNicheLabel')) $('generateNicheLabel').textContent = config.name;
+  if ($('crmNicheTitle')) $('crmNicheTitle').textContent = config.name;
+  if ($('closedNicheTitle')) $('closedNicheTitle').textContent = config.name;
+
+  if ($('searchQuery') && !$('searchQuery').value.trim()) {
+    $('searchQuery').value = config.defaultQuery;
+  }
+  if ($('locationQuery') && !$('locationQuery').value.trim()) {
+    $('locationQuery').value = config.defaultLocation;
+  }
+
+  // Refetch leads & CRM for new niche
+  fetchContactedFromDB();
+  fetchFollowUpsFromDB();
+  fetchSearchHistoryFromDB();
+}
+
+function getNicheConfig(key) {
+  if (NICHES[key]) return NICHES[key];
+  const found = state.customNiches.find(n => n.id === key);
+  return found || { id: key, name: key, icon: '📌', defaultQuery: `${key} businesses`, defaultLocation: 'Mumbai, India' };
+}
+
+function renderNichePills() {
+  const container = $('nicheBar');
+  if (!container) return;
+
+  const allNiches = [...Object.values(NICHES), ...state.customNiches];
+  
+  let html = allNiches.map(n => `
+    <button class="niche-pill ${state.activeNiche === n.id ? 'active' : ''}" data-niche="${n.id}" onclick="switchNiche('${n.id}')">
+      <span>${n.icon}</span> ${escapeHtml(n.name)}
+    </button>
+  `).join('');
+
+  html += `
+    <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
+      <span>➕</span> Add Niche
+    </button>
+  `;
+
+  container.innerHTML = html;
+}
+
+function promptAddNewNiche() {
+  const name = prompt('Enter New Niche Vertical Name (e.g. Photographer, Dentist, Real Estate):');
+  if (!name || !name.trim()) return;
+
+  const icon = prompt('Enter an Emoji Icon for this Niche (e.g. 📸, 🦷, 🏢):') || '📌';
+  const cleanId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+
+  const newNiche = {
+    id: cleanId,
+    name: name.trim(),
+    icon: icon.trim(),
+    defaultQuery: `${name.trim()} businesses`,
+    defaultLocation: 'Mumbai, India'
+  };
+
+  state.customNiches.push(newNiche);
+  localStorage.setItem('custom_niches', JSON.stringify(state.customNiches));
+  switchNiche(cleanId);
+  showToast(`✨ New workspace "${name.trim()}" created!`, 'success');
+}
+
+function loadNicheTemplates(nicheKey) {
+  const config = getNicheConfig(nicheKey);
+  const savedTpl = localStorage.getItem(`outreach_template_${nicheKey}`) || config.template || 'Hi [Name], I noticed your business...';
+  const savedFol = localStorage.getItem(`outreach_followup_template_${nicheKey}`) || config.followup || 'Hi [Name], floating this to top of your inbox...';
+
+  state.outreachTemplate = savedTpl;
+  state.outreachFollowupTemplate = savedFol;
+
+  if ($('outreachTemplate')) $('outreachTemplate').value = savedTpl;
+  if ($('outreachFollowupTemplate')) $('outreachFollowupTemplate').value = savedFol;
+}
+
 // ─── Follow-up CRM Logic ─────────────────────────────────────────
 
 async function fetchFollowUpsFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) {
-    $('followupsSubtitle').textContent = "Connect Supabase to load follow-ups!";
+    if ($('followupsSubtitle')) $('followupsSubtitle').textContent = "Connect Supabase to load follow-ups!";
     return;
   }
   
-  $('followupsSubtitle').textContent = "Loading follow-ups...";
-  
   try {
-    // Select everything, ordered by oldest contacted first so we can ping them
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
+    // Select contacted leads for the active niche
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&niche=eq.${state.activeNiche}&order=contacted_at.asc`, {
       method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
@@ -1063,13 +1179,19 @@ async function fetchFollowUpsFromDB() {
 
     if (res.ok) {
       const data = await res.json();
-      state.followups = data;
+      state.followups = data.filter(d => d.status !== 'closed');
+      state.closedDeals = data.filter(d => d.status === 'closed');
+      
       renderFollowUpsView();
-      $('followupsSubtitle').textContent = `${data.length} Leads to follow up with`;
+      renderClosedDealsView();
+
+      if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.followups.length;
+      if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
+      if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} Leads to follow up with`;
+      if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} Won client deals in ${getNicheConfig(state.activeNiche).name}`;
     }
   } catch (err) {
     console.warn('Supabase follow-up fetch failed:', err);
-    $('followupsSubtitle').textContent = "Failed to load follow-ups.";
   }
 }
 
@@ -1150,11 +1272,17 @@ function renderFollowUpsView() {
         <div>📞 <strong>${escapeHtml(item.phone)}</strong></div>
         <div class="followup-date">Last contact: ${dateStr}</div>
       </div>
-      <button class="followup-action-btn ${btnClass}" ${isDisabled ? 'disabled' : ''} onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
-        <svg fill="currentColor" viewBox="0 0 24 24" width="16" height="16">
-          <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-        </svg> ${btnText}
-      </button>
+      <div class="followup-card-actions">
+        <button class="followup-action-btn ${btnClass}" ${isDisabled ? 'disabled' : ''} onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
+          <svg fill="currentColor" viewBox="0 0 24 24" width="16" height="16">
+            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
+          </svg> ${btnText}
+        </button>
+        <button class="deal-closed-btn" onclick="markDealClosed('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}')" title="Mark Deal as Closed & Won!">
+          🎉 Mark Deal Closed
+        </button>
+      </div>
+    `;
     `;
     
     grid.appendChild(card);
@@ -1170,14 +1298,78 @@ function sendFollowUpMessage(id, phone, name, currentCount) {
   // Replace variable
   const finalMessage = template.replace(/\[Name\]/ig, name || 'there');
     
-  // Format phone to digits only (strip + sign and spaces)
-  const cleanDigits = (phone || '').replace(/\D/g, '');
-  if (!cleanDigits) {
-    return showToast('⚠️ Invalid phone number for WhatsApp', 'warning');
-  }
+function renderClosedDealsView() {
+  const grid = $('closedDealsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
   
-  // Async update db to refresh the timer and increment the count
-  updateFollowUpInDB(id, currentCount + 1);
+  if (!state.closedDeals || state.closedDeals.length === 0) {
+    grid.innerHTML = `<div style="color:var(--text-muted); padding:30px; text-align:center; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-subtle); grid-column: 1 / -1;">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5" style="margin-bottom:10px;">
+        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+      </svg>
+      <div>No closed deals yet in ${getNicheConfig(state.activeNiche).name}. Keep reaching out to convert your first client!</div>
+    </div>`;
+    return;
+  }
+
+  state.closedDeals.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'followup-card closed-deal-card';
+    const closedDate = item.deal_closed_at ? new Date(item.deal_closed_at).toLocaleDateString() : 'Recently';
+    
+    card.innerHTML = `
+      <div class="followup-header">
+        <div class="followup-name">${escapeHtml(item.name || 'Client Business')}</div>
+        <div><span class="followup-badge badge-closed">🏆 Deal Closed (${closedDate})</span></div>
+      </div>
+      <div class="followup-meta">
+        <div>📞 <strong>${escapeHtml(item.phone)}</strong></div>
+        <div class="followup-date">Niche: ${getNicheConfig(item.niche || state.activeNiche).name}</div>
+      </div>
+      <div class="closed-congrats-banner">
+        🎉 Client Converted & Won!
+      </div>
+    `;
+    grid.appendChild(card);
+  });
+}
+
+async function markDealClosed(id, phone, name) {
+  if (!confirm(`🎉 Mark deal with "${name}" as CLOSED & WON?`)) return;
+
+  if (!state.supabaseUrl || !state.supabaseKey) {
+    // Local fallback
+    state.followups = state.followups.filter(f => f.phone !== phone);
+    renderFollowUpsView();
+    showToast(`🎉 Deal marked closed for ${name}!`, 'success');
+    return;
+  }
+
+  try {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?id=eq.${id}`, {
+      method: 'PATCH',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        status: 'closed',
+        deal_closed_at: new Date().toISOString()
+      })
+    });
+
+    if (res.ok) {
+      showToast(`🏆 Congratulations! Deal closed with ${name}!`, 'success');
+      fetchFollowUpsFromDB();
+    } else {
+      showToast('⚠️ Could not update deal status in DB', 'error');
+    }
+  } catch (err) {
+    console.warn('Mark deal closed failed:', err);
+  }
+}
   
   // Open WA
   const encodedMsg = encodeURIComponent(finalMessage);

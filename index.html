@@ -120,7 +120,7 @@
   </header>
 
   <main class="main-layout">
-    <!-- Sidebar / Control Panel -->
+    <!-- Sidebar / Control Panel (Streamlined API & Cloud Sync) -->
     <aside class="sidebar" id="sidebar">
       <!-- Brand & Engine Badge -->
       <div class="sidebar-brand-card">
@@ -130,7 +130,7 @@
         </div>
       </div>
 
-      <!-- Card 1: API & Database Connection -->
+      <!-- Card 1: API & Cloud Sync Connection -->
       <div class="sidebar-card">
         <div class="sidebar-card-header">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -175,176 +175,8 @@
         </div>
       </div>
 
-      <!-- Card 2: Search Parameters -->
-      <div class="sidebar-card">
-        <div class="sidebar-card-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          Search Criteria
-        </div>
-
-        <!-- Search Query -->
-        <div class="form-section compact">
-          <div class="section-label">Business Type / Keyword</div>
-          <input type="text" id="searchQuery" class="form-input" placeholder="e.g. coaching institutes, dental clinics…" />
-        </div>
-
-        <!-- Location -->
-        <div class="form-section compact">
-          <div class="section-label">Target Location</div>
-          <input type="text" id="locationQuery" class="form-input" placeholder="e.g. Mumbai, Maharashtra, India" />
-        </div>
-
-        <!-- Max Results Slider -->
-        <div class="form-section compact">
-          <div class="section-label">Max Leads to Scrape</div>
-          <div class="range-container">
-            <input type="range" id="maxResultsSlider" class="range-input" min="5" max="200" value="20" step="5" />
-            <div class="range-labels">
-              <span>5</span>
-              <span class="range-value" id="rangeValue">20</span>
-              <span>200</span>
-            </div>
-          </div>
-        </div>
-
-        <!-- Minimum Rating Filter -->
-        <div class="form-section compact">
-          <div class="section-label">Minimum Star Rating</div>
-          <div class="star-rating" id="starRating">
-            <button class="star-btn active" data-value="0" id="star-0">Any</button>
-            <button class="star-btn" data-value="3" id="star-3">3★+</button>
-            <button class="star-btn" data-value="3.5" id="star-35">3.5★+</button>
-            <button class="star-btn" data-value="4" id="star-4">4★+</button>
-            <button class="star-btn" data-value="4.5" id="star-45">4.5★+</button>
-          </div>
-        </div>
-
-        <!-- Language Filter -->
-        <div class="form-section compact" style="margin-bottom: 0;">
-          <div class="section-label">Maps Language</div>
-          <select id="languageSelect" class="form-input form-select">
-            <option value="en">English</option>
-            <option value="hi">Hindi</option>
-            <option value="es">Spanish</option>
-            <option value="fr">French</option>
-            <option value="de">German</option>
-            <option value="ja">Japanese</option>
-            <option value="zh">Chinese</option>
-            <option value="ar">Arabic</option>
-            <option value="pt">Portuguese</option>
-          </select>
-        </div>
-      </div>
-
-      <!-- Card 3: Smart Filters & Rules -->
-      <div class="sidebar-card">
-        <div class="sidebar-card-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-          </svg>
-          Smart Lead Qualification
-        </div>
-
-        <!-- Phone Number Required Toggle -->
-        <div class="form-section compact">
-          <label class="switch-container">
-            <input type="checkbox" id="hasPhoneOnlyToggle" checked>
-            <span class="switch-slider"></span>
-            <span class="switch-label">Require Phone Number</span>
-          </label>
-          <div class="input-hint">Extracts <code>phone</code> or <code>phoneUnformatted</code> for WhatsApp outreach.</div>
-        </div>
-
-        <!-- 15+ Reviews Social Proof Toggle -->
-        <div class="form-section compact">
-          <label class="switch-container">
-            <input type="checkbox" id="minReviewsToggle">
-            <span class="switch-slider"></span>
-            <span class="switch-label">Active Business (15+ Reviews)</span>
-          </label>
-          <div class="input-hint">Filters active businesses generating revenue & customers.</div>
-        </div>
-
-        <!-- Website Filter Toggle -->
-        <div class="form-section compact">
-          <label class="switch-container">
-            <input type="checkbox" id="onlyWithoutWebsiteToggle">
-            <span class="switch-slider"></span>
-            <span class="switch-label">Missing / Weak Website Only</span>
-          </label>
-          <div class="input-hint">Empty sites & <code>.business.site</code>, <code>.wixsite.com</code>, <code>.site123.me</code></div>
-        </div>
-
-        <!-- Contacted Filter Toggle -->
-        <div class="form-section compact">
-          <label class="switch-container">
-            <input type="checkbox" id="onlyContactedToggle">
-            <span class="switch-slider"></span>
-            <span class="switch-label">Only Contacted Leads</span>
-          </label>
-        </div>
-
-        <!-- Deduplication Toggle -->
-        <div class="form-section compact" style="margin-bottom: 0;">
-          <label class="switch-container">
-            <input type="checkbox" id="removeDuplicatesToggle" checked>
-            <span class="switch-slider"></span>
-            <span class="switch-label">Remove Duplicate Phones</span>
-          </label>
-        </div>
-      </div>
-
-      <!-- Card 4: Outreach Templates -->
-      <div class="sidebar-card">
-        <div class="sidebar-card-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-          </svg>
-          Outreach Templates
-        </div>
-
-        <div class="form-section compact">
-          <div class="section-label">Initial WhatsApp Message</div>
-          <textarea id="outreachTemplate" class="form-input form-textarea" rows="4" placeholder="Hi [Name], I noticed your [Reviews] reviews..."></textarea>
-          <div class="input-hint template-helpers">
-            Variables: <code>[Name]</code>, <code>[Category]</code>, <code>[Reviews]</code>, <code>[Stars]</code>
-          </div>
-        </div>
-
-        <div class="form-section compact" style="margin-bottom: 0;">
-          <div class="section-label">Follow-up Message Template</div>
-          <textarea id="outreachFollowupTemplate" class="form-input form-textarea" rows="3" placeholder="Hi [Name], floating this to top of your inbox..."></textarea>
-        </div>
-      </div>
-
-      <!-- Card 5: Recent Cloud Searches -->
-      <div class="sidebar-card hidden" id="recentSearchesSection">
-        <div class="sidebar-card-header">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="12 8 12 12 14 14"/><circle cx="12" cy="12" r="10"/>
-          </svg>
-          Recent Cloud Searches
-        </div>
-        <div class="recent-searches-list" id="recentSearchesList"></div>
-      </div>
-
-      <!-- Actions Section -->
+      <!-- Quick Action Import -->
       <div class="sidebar-action-group">
-        <button class="generate-btn" id="generateBtn" onclick="generateLeads()">
-          <span class="btn-content" id="btnContent">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-            </svg>
-            Generate Leads
-          </span>
-          <span class="btn-loader hidden" id="btnLoader">
-            <span class="spinner"></span>
-            Scraping…
-          </span>
-        </button>
-
         <button class="secondary-btn" id="importDatasetBtn" onclick="openImportModal()" title="Import existing Apify Dataset ID or JSON">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -370,13 +202,32 @@
 
     <!-- Main Dashboard -->
     <section class="dashboard" id="dashboard">
+      <!-- Top Niche Bar -->
+      <div class="niche-selector-container">
+        <div class="niche-label">Active Workspaces:</div>
+        <div class="niche-scroll-wrapper" id="nicheBar">
+          <button class="niche-pill active" data-niche="coaching" onclick="switchNiche('coaching')">
+            <span>🎓</span> Coaching Institutes
+          </button>
+          <button class="niche-pill" data-niche="makeup" onclick="switchNiche('makeup')">
+            <span>💄</span> Bridal & Spa
+          </button>
+          <button class="niche-pill" data-niche="cardenting" onclick="switchNiche('cardenting')">
+            <span>🚗</span> Car Decoration & Denting
+          </button>
+          <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
+            <span>➕</span> Add Niche
+          </button>
+        </div>
+      </div>
+
       <!-- Navigation Tabs Bar -->
       <div class="dashboard-nav-bar" id="dashboardNavBar">
-        <button class="dash-nav-tab active" id="tabSearch" onclick="showState('empty')" title="Search Form">
+        <button class="dash-nav-tab active" id="tabSearch" onclick="showState('empty')" title="Search & Scrape Launcher">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
           </svg>
-          Search Criteria
+          Search Criteria Launcher
         </button>
         <button class="dash-nav-tab" id="tabResults" onclick="setView('grid')" title="Scraped Leads Dashboard">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -390,10 +241,164 @@
           </svg>
           Contacted CRM <span class="nav-count-badge" id="contactedNavBadge">0</span>
         </button>
+        <button class="dash-nav-tab" id="tabClosedDeals" onclick="setView('closed')" title="Closed Deals">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+          </svg>
+          Closed Deals <span class="nav-count-badge gold-badge" id="closedNavBadge">0</span>
+        </button>
       </div>
 
-      <!-- Empty State -->
-      <div class="empty-state" id="emptyState">
+      <!-- Functional Search & Scrape Launcher Workspace -->
+      <div class="search-workspace-wrapper" id="emptyState">
+        <div class="search-workspace-header">
+          <div class="search-workspace-title">
+            <span id="activeNicheBadge" class="active-niche-tag">🎓 Coaching Workspace</span>
+            Search & Lead Generation Launcher
+          </div>
+          <p class="search-workspace-subtitle">Configure search parameters, filters, and niche-specific templates to scrape Google Maps.</p>
+        </div>
+
+        <div class="search-workspace-grid">
+          <!-- Card A: Target Parameters -->
+          <div class="search-card">
+            <div class="search-card-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+              </svg>
+              Search Criteria
+            </div>
+
+            <div class="form-section">
+              <div class="section-label">Business Type / Keyword</div>
+              <input type="text" id="searchQuery" class="form-input" placeholder="e.g. NEET coaching, bridal makeup, car denting…" />
+            </div>
+
+            <div class="form-section">
+              <div class="section-label">Target Location</div>
+              <input type="text" id="locationQuery" class="form-input" placeholder="e.g. Patna, Bihar, India" />
+            </div>
+
+            <div class="form-section">
+              <div class="section-label">Max Leads to Scrape</div>
+              <div class="range-container">
+                <input type="range" id="maxResultsSlider" class="range-input" min="5" max="200" value="20" step="5" />
+                <div class="range-labels">
+                  <span>5</span>
+                  <span class="range-value" id="rangeValue">20</span>
+                  <span>200</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="form-section" style="margin-bottom: 0;">
+              <div class="section-label">Minimum Star Rating</div>
+              <div class="star-rating" id="starRating">
+                <button class="star-btn active" data-value="0" id="star-0">Any</button>
+                <button class="star-btn" data-value="3" id="star-3">3★+</button>
+                <button class="star-btn" data-value="3.5" id="star-35">3.5★+</button>
+                <button class="star-btn" data-value="4" id="star-4">4★+</button>
+                <button class="star-btn" data-value="4.5" id="star-45">4.5★+</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Card B: Lead Qualification Rules -->
+          <div class="search-card">
+            <div class="search-card-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
+              </svg>
+              Qualification & Language
+            </div>
+
+            <div class="form-section">
+              <label class="switch-container">
+                <input type="checkbox" id="hasPhoneOnlyToggle" checked>
+                <span class="switch-slider"></span>
+                <span class="switch-label">Require Phone Number</span>
+              </label>
+              <div class="input-hint">Ensures phone or phoneUnformatted is present.</div>
+            </div>
+
+            <div class="form-section">
+              <label class="switch-container">
+                <input type="checkbox" id="minReviewsToggle">
+                <span class="switch-slider"></span>
+                <span class="switch-label">Active Business (15+ Reviews)</span>
+              </label>
+              <div class="input-hint">Social proof filter for active businesses making revenue.</div>
+            </div>
+
+            <div class="form-section">
+              <label class="switch-container">
+                <input type="checkbox" id="onlyWithoutWebsiteToggle">
+                <span class="switch-slider"></span>
+                <span class="switch-label">Missing / Weak Website Only</span>
+              </label>
+              <div class="input-hint">Empty sites & <code>.business.site</code>, <code>.wixsite.com</code>, etc.</div>
+            </div>
+
+            <div class="form-section">
+              <label class="switch-container">
+                <input type="checkbox" id="removeDuplicatesToggle" checked>
+                <span class="switch-slider"></span>
+                <span class="switch-label">Remove Duplicate Phones</span>
+              </label>
+            </div>
+
+            <div class="form-section" style="margin-bottom: 0;">
+              <div class="section-label">Maps Language</div>
+              <select id="languageSelect" class="form-input form-select">
+                <option value="en">English</option>
+                <option value="hi">Hindi</option>
+                <option value="es">Spanish</option>
+                <option value="fr">French</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Card C: Dedicated Niche Message Templates -->
+          <div class="search-card wide-card">
+            <div class="search-card-header">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+              </svg>
+              Dedicated Outreach Templates (<span id="templateNicheName">Coaching</span>)
+            </div>
+
+            <div class="template-grid">
+              <div class="form-section">
+                <div class="section-label">Initial WhatsApp Outreach</div>
+                <textarea id="outreachTemplate" class="form-input form-textarea" rows="4" placeholder="Hi [Name], I noticed your [Reviews] reviews..."></textarea>
+                <div class="input-hint">Variables: <code>[Name]</code>, <code>[Category]</code>, <code>[Reviews]</code>, <code>[Stars]</code></div>
+              </div>
+
+              <div class="form-section">
+                <div class="section-label">Follow-up Message Template</div>
+                <textarea id="outreachFollowupTemplate" class="form-input form-textarea" rows="4" placeholder="Hi [Name], floating this to top of your inbox..."></textarea>
+                <div class="input-hint">Used in Contacted CRM follow-up cadence</div>
+              </div>
+            </div>
+
+            <!-- Primary Generate Button -->
+            <div class="launcher-actions">
+              <button class="generate-btn large-btn" id="generateBtn" onclick="generateLeads()">
+                <span class="btn-content" id="btnContent">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                  </svg>
+                  Generate Leads for <span id="generateNicheLabel">Coaching</span>
+                </span>
+                <span class="btn-loader hidden" id="btnLoader">
+                  <span class="spinner"></span>
+                  Scraping Google Maps…
+                </span>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
         <div class="empty-icon">
           <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round">
             <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
@@ -547,12 +552,34 @@
               Back
             </button>
             <div>
-              <h2 class="results-title">Contacted Leads CRM</h2>
+              <h2 class="results-title">Contacted Leads CRM (<span id="crmNicheTitle">Coaching</span>)</h2>
               <div class="results-subtitle" id="followupsSubtitle">Loading follow-ups...</div>
             </div>
           </div>
         </div>
         <div class="followups-grid" id="followupsGrid">
+          <!-- Dynamically populated via JS -->
+        </div>
+      </div>
+
+      <!-- Closed Deals Area -->
+      <div class="closed-deals-area hidden" id="closedDealsArea">
+        <div class="results-toolbar">
+          <div class="results-meta">
+            <button class="back-nav-btn" onclick="goBackToPreviousView()" title="Go Back">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <line x1="19" y1="12" x2="5" y2="12"></line>
+                <polyline points="12 19 5 12 12 5"></polyline>
+              </svg>
+              Back
+            </button>
+            <div>
+              <h2 class="results-title">🏆 Closed Deals (<span id="closedNicheTitle">Coaching</span>)</h2>
+              <div class="results-subtitle" id="closedDealsSubtitle">Successfully converted client deals!</div>
+            </div>
+          </div>
+        </div>
+        <div class="followups-grid" id="closedDealsGrid">
           <!-- Dynamically populated via JS -->
         </div>
       </div>
