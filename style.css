@@ -1396,17 +1396,22 @@ body.sidebar-collapsed .sidebar *,
   margin-top: 4px;
 }
 
-/* Green Button: Less than 3 days (Wait / Normal window) */
-.followup-btn-green {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-  color: white;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+/* Disabled Button: Criteria not met (<3 days wait period) */
+.followup-btn-disabled {
+  background: var(--bg-input) !important;
+  border: 1px solid var(--border-subtle) !important;
+  color: var(--text-muted) !important;
+  cursor: not-allowed !important;
+  opacity: 0.55 !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
 }
 
-.followup-btn-green:hover {
-  background: linear-gradient(135deg, #059669 0%, #047857 100%);
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
-  transform: translateY(-1px);
+.followup-btn-disabled:hover {
+  background: var(--bg-input) !important;
+  color: var(--text-muted) !important;
+  transform: none !important;
+  box-shadow: none !important;
 }
 
 /* Red Button: 2-3+ Days Ago (Urgent Due window!) */
