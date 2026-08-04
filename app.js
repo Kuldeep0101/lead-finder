@@ -885,9 +885,10 @@ function toggleContactedFilter() {
 }
 
 function filterLeads() {
-  const query = $('filterInput').value.toLowerCase();
+  const filterEl = $('filterInput');
+  const query = filterEl ? filterEl.value.toLowerCase().trim() : '';
   
-  let processedList = state.leads;
+  let processedList = state.leads || [];
 
   // Deduplication Logic
   if (state.removeDuplicates) {
@@ -1243,6 +1244,7 @@ async function fetchFollowUpsFromDB() {
 
 function renderFollowUpsView() {
   const grid = $('followupsGrid');
+  if (!grid) return;
   grid.innerHTML = '';
   
   if (!state.followups || state.followups.length === 0) {
@@ -1789,15 +1791,16 @@ function goBackToPreviousView() {
 }
 
 function showState(which) {
-  ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea'].forEach(id => {
+  ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea', 'closedDealsArea'].forEach(id => {
     if ($(id)) $(id).classList.add('hidden');
   });
-  const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea' };
+  const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea', closed: 'closedDealsArea' };
   if ($(map[which])) $(map[which]).classList.remove('hidden');
 
   if (which === 'empty') updateNavTabs('tabSearch');
   if (which === 'results') updateNavTabs('tabResults');
   if (which === 'followups') updateNavTabs('tabFollowups');
+  if (which === 'closed') updateNavTabs('tabClosedDeals');
 }
 
 function setBtnLoading(loading) {
@@ -1827,8 +1830,8 @@ function activateStep(num) {
 }
 
 function updateResultsMeta(query, location, count) {
-  $('resultsTitle').textContent = `${count} Leads Found`;
-  $('resultsSubtitle').textContent = `"${query}" in ${location}`;
+  if ($('resultsTitle')) $('resultsTitle').textContent = `${count} Leads Found`;
+  if ($('resultsSubtitle')) $('resultsSubtitle').textContent = `"${query}" in ${location}`;
 }
 
 function showError(msg) {
