@@ -215,10 +215,18 @@ body {
 
 .sidebar-collapsed .sidebar {
   width: 0;
+  min-width: 0;
   padding: 0;
+  margin: 0;
   border-right: none;
   opacity: 0;
   pointer-events: none;
+  overflow: hidden !important;
+  visibility: hidden;
+}
+
+.sidebar-collapsed .sidebar * {
+  display: none !important;
 }
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
