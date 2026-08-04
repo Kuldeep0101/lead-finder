@@ -868,17 +868,19 @@ function setView(view) {
     }
 
     fetchScrapedLeadsFromDB().then((res) => {
-      console.log(`🔍 [LeadMapper Debug] fetchScrapedLeadsFromDB completed. res=${res}, leads=${state.leads.length}, filtered=${state.filteredLeads.length}`);
+      console.log(`🔍 [LeadMapper Debug] fetchScrapedLeadsFromDB completed. res=${res}, leads=${state.leads.length}, currentView=${state.currentView}`);
       filterLeads();
       renderGridView();
       renderTableView();
-      showState('results');
-      if (view === 'grid') {
-        if (grid) grid.classList.remove('hidden');
-        if (table) table.classList.add('hidden');
-      } else {
-        if (grid) grid.classList.add('hidden');
-        if (table) table.classList.remove('hidden');
+      if (state.currentView === 'grid' || state.currentView === 'table') {
+        showState('results');
+        if (state.currentView === 'grid') {
+          if (grid) grid.classList.remove('hidden');
+          if (table) table.classList.add('hidden');
+        } else {
+          if (grid) grid.classList.add('hidden');
+          if (table) table.classList.remove('hidden');
+        }
       }
     });
   } else if (view === 'followups') {
@@ -1271,6 +1273,15 @@ async function fetchFollowUpsFromDB() {
       if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
       if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} Leads to follow up with`;
       if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} Won client deals in ${getNicheConfig(state.activeNiche).name}`;
+
+      // Enforce correct active view after async fetch resolves
+      if (state.currentView === 'followups') {
+        showState('followups');
+        if ($('followupsArea')) $('followupsArea').classList.remove('hidden');
+      } else if (state.currentView === 'closed') {
+        showState('closed');
+        if ($('closedDealsArea')) $('closedDealsArea').classList.remove('hidden');
+      }
     } else {
       console.error(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB HTTP error status=${res.status}`);
     }
@@ -1639,7 +1650,11 @@ async function fetchScrapedLeadsFromDB() {
         updateResultsMeta(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase Scraped Leads', state.filteredLeads.length);
         
         saveActiveSession(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase', leads);
-        showState('results');
+        
+        // ONLY switch view to results if the user is currently on grid/table tab
+        if (state.currentView === 'grid' || state.currentView === 'table') {
+          showState('results');
+        }
         return true;
       }
     }
