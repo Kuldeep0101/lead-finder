@@ -1400,13 +1400,36 @@ async function markDealClosed(id, phone, name) {
 
 function openSettingsModal() {
   const modal = $('settingsModal');
+  if ($('supabaseUrl') && state.supabaseUrl) $('supabaseUrl').value = state.supabaseUrl;
+  if ($('supabaseKey') && state.supabaseKey) $('supabaseKey').value = state.supabaseKey;
+  if ($('apifyApiKey')) {
+    const savedApiKey = localStorage.getItem('apify_api_key');
+    if (savedApiKey) $('apifyApiKey').value = savedApiKey;
+  }
   if (modal) modal.classList.remove('hidden');
 }
 
 function closeSettingsModal() {
   const modal = $('settingsModal');
+  if ($('supabaseUrl')) {
+    state.supabaseUrl = $('supabaseUrl').value.trim();
+    localStorage.setItem('supabase_url', state.supabaseUrl);
+  }
+  if ($('supabaseKey')) {
+    state.supabaseKey = $('supabaseKey').value.trim();
+    localStorage.setItem('supabase_key', state.supabaseKey);
+  }
+  if ($('apifyApiKey')) {
+    localStorage.setItem('apify_api_key', $('apifyApiKey').value.trim());
+  }
+
   if (modal) modal.classList.add('hidden');
   showToast('⚙️ Settings saved & applied!', 'success');
+  
+  if (state.supabaseUrl && state.supabaseKey) {
+    fetchContactedFromDB();
+    fetchFollowUpsFromDB();
+  }
 }
 
 async function updateFollowUpInDB(id, newCount) {
