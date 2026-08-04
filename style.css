@@ -2,32 +2,32 @@
    LeadMapper — Premium SaaS Dashboard Styles
    ============================================ */
 
-/* === CSS Custom Properties === */
+/* === CSS Custom Properties (Light Cream / White Theme) === */
 :root {
-  --bg-primary: #191c32;
-  --bg-secondary: #202540;
-  --bg-card: #272d4d;
-  --bg-card-hover: #30375d;
-  --bg-input: #1f2441;
-  --bg-sidebar: rgba(31, 36, 65, 0.88);
+  --bg-primary: #f8fafc;
+  --bg-secondary: #f1f5f9;
+  --bg-card: #ffffff;
+  --bg-card-hover: #f8fafc;
+  --bg-input: #ffffff;
+  --bg-sidebar: rgba(255, 255, 255, 0.94);
 
-  --accent-primary: #6c63ff;
-  --accent-secondary: #a78bfa;
-  --accent-glow: rgba(108, 99, 255, 0.35);
-  --accent-green: #10d48e;
-  --accent-rose: #f45b7b;
-  --accent-amber: #fbbf24;
+  --accent-primary: #4f46e5;
+  --accent-secondary: #6366f1;
+  --accent-glow: rgba(79, 70, 229, 0.2);
+  --accent-green: #059669;
+  --accent-rose: #e11d48;
+  --accent-amber: #d97706;
 
-  --text-primary: #ffffff;
-  --text-secondary: #b2bddb;
-  --text-muted: #7987ab;
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
 
-  --border-subtle: rgba(255, 255, 255, 0.12);
-  --border-accent: rgba(108, 99, 255, 0.45);
+  --border-subtle: #e2e8f0;
+  --border-accent: rgba(79, 70, 229, 0.4);
 
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-  --shadow-card: 0 8px 32px rgba(0, 0, 0, 0.25);
-  --shadow-glow: 0 0 30px rgba(108, 99, 255, 0.25);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.08);
+  --shadow-card: 0 4px 20px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
+  --shadow-glow: 0 0 24px rgba(79, 70, 229, 0.15);
 
   --radius-sm: 8px;
   --radius-md: 12px;
@@ -1605,10 +1605,10 @@ body.sidebar-collapsed .sidebar *,
 }
 
 .dash-nav-tab.active {
-  background: linear-gradient(135deg, rgba(108, 99, 255, 0.25), rgba(167, 139, 250, 0.2));
-  color: var(--text-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 16px var(--accent-glow);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
 
 .nav-count-badge {
@@ -1619,8 +1619,8 @@ body.sidebar-collapsed .sidebar *,
   font-weight: 700;
   padding: 2px 7px;
   border-radius: 12px;
-  background: rgba(255, 255, 255, 0.1);
-  color: var(--text-primary);
+  background: rgba(15, 23, 42, 0.08);
+  color: inherit;
 }
 
 .back-nav-btn {
@@ -2031,7 +2031,7 @@ body.sidebar-collapsed .sidebar *,
   border: 1px solid var(--border-subtle);
   border-radius: var(--radius-lg);
   padding: 10px 16px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 2px 10px rgba(15, 23, 42, 0.05);
 }
 
 .niche-label {
@@ -2059,8 +2059,8 @@ body.sidebar-collapsed .sidebar *,
   gap: 8px;
   padding: 8px 16px;
   border-radius: 20px;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
+  background: #f1f5f9;
+  border: 1px solid #e2e8f0;
   color: var(--text-secondary);
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.84rem;
@@ -2071,28 +2071,28 @@ body.sidebar-collapsed .sidebar *,
 }
 
 .niche-pill:hover {
-  background: var(--bg-hover);
+  background: #e2e8f0;
   color: var(--text-primary);
   border-color: var(--border-accent);
 }
 
 .niche-pill.active {
-  background: linear-gradient(135deg, rgba(108, 99, 255, 0.25) 0%, rgba(167, 139, 250, 0.2) 100%);
-  color: var(--text-primary);
-  border-color: var(--accent-primary);
-  box-shadow: 0 0 16px rgba(108, 99, 255, 0.35);
+  background: linear-gradient(135deg, #4f46e5 0%, #6366f1 100%);
+  color: #ffffff;
+  border-color: #4f46e5;
+  box-shadow: 0 4px 14px rgba(79, 70, 229, 0.3);
 }
 
 .add-niche-btn {
-  background: rgba(16, 212, 142, 0.12);
-  border-color: rgba(16, 212, 142, 0.3);
-  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.1);
+  border-color: rgba(5, 150, 105, 0.3);
+  color: #047857;
 }
 
 .add-niche-btn:hover {
-  background: rgba(16, 212, 142, 0.22);
-  border-color: rgba(16, 212, 142, 0.5);
-  color: #a7f3d0;
+  background: rgba(5, 150, 105, 0.2);
+  border-color: rgba(5, 150, 105, 0.5);
+  color: #065f46;
 }
 
 /* === Functional Search & Scrape Launcher Workspace === */
@@ -2121,9 +2121,9 @@ body.sidebar-collapsed .sidebar *,
   font-weight: 700;
   padding: 4px 12px;
   border-radius: 14px;
-  background: rgba(108, 99, 255, 0.15);
-  border: 1px solid rgba(108, 99, 255, 0.35);
-  color: var(--accent-secondary);
+  background: rgba(79, 70, 229, 0.1);
+  border: 1px solid rgba(79, 70, 229, 0.3);
+  color: var(--accent-primary);
 }
 
 .search-workspace-subtitle {
@@ -2145,7 +2145,7 @@ body.sidebar-collapsed .sidebar *,
   display: flex;
   flex-direction: column;
   gap: 16px;
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 4px 16px rgba(15, 23, 42, 0.05);
 }
 
 .search-card.wide-card {
@@ -2165,7 +2165,7 @@ body.sidebar-collapsed .sidebar *,
 }
 
 .search-card-header svg {
-  color: var(--accent-secondary);
+  color: var(--accent-primary);
 }
 
 .template-grid {
@@ -2186,9 +2186,9 @@ body.sidebar-collapsed .sidebar *,
 
 /* === Closed Deals & Badges === */
 .gold-badge {
-  background: rgba(251, 191, 36, 0.2) !important;
-  color: #fbbf24 !important;
-  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+  background: rgba(217, 119, 6, 0.15) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(217, 119, 6, 0.35) !important;
 }
 
 .followup-card-actions {
@@ -2205,9 +2205,9 @@ body.sidebar-collapsed .sidebar *,
   font-family: 'Space Grotesk', sans-serif;
   font-size: 0.88rem;
   font-weight: 700;
-  background: rgba(16, 212, 142, 0.12);
-  border: 1px solid rgba(16, 212, 142, 0.35);
-  color: #6ee7b7;
+  background: rgba(5, 150, 105, 0.1);
+  border: 1px solid rgba(5, 150, 105, 0.3);
+  color: #047857;
   cursor: pointer;
   transition: var(--transition);
   display: flex;
@@ -2217,31 +2217,31 @@ body.sidebar-collapsed .sidebar *,
 }
 
 .deal-closed-btn:hover {
-  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
   color: white;
-  border-color: #10b981;
-  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.4);
+  border-color: #059669;
+  box-shadow: 0 4px 14px rgba(5, 150, 105, 0.3);
 }
 
 .badge-closed {
-  background: rgba(251, 191, 36, 0.18) !important;
-  color: #fef08a !important;
-  border: 1px solid rgba(251, 191, 36, 0.4) !important;
+  background: rgba(217, 119, 6, 0.15) !important;
+  color: #b45309 !important;
+  border: 1px solid rgba(217, 119, 6, 0.35) !important;
 }
 
 .closed-deal-card {
-  border-color: rgba(251, 191, 36, 0.4) !important;
-  box-shadow: 0 0 20px rgba(251, 191, 36, 0.15) !important;
+  border-color: rgba(217, 119, 6, 0.35) !important;
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.1) !important;
 }
 
 .closed-congrats-banner {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.15) 100%);
-  border: 1px solid rgba(251, 191, 36, 0.3);
+  background: linear-gradient(135deg, rgba(254, 243, 199, 0.8) 0%, rgba(253, 230, 138, 0.8) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.4);
   border-radius: var(--radius-md);
   padding: 10px;
   text-align: center;
   font-family: 'Space Grotesk', sans-serif;
   font-weight: 700;
-  color: #fef08a;
+  color: #92400e;
   font-size: 0.88rem;
 }
