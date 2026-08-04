@@ -151,11 +151,11 @@
               </div>
 
               <div class="star-rating-box">
-                <label class="form-label">Min Rating Filter</label>
+                <label class="form-label">Min Rating Filter (Default 3.0+)</label>
                 <div class="star-picker" id="starPicker">
-                  <span class="star-btn" data-rating="1">★</span>
-                  <span class="star-btn" data-rating="2">★</span>
-                  <span class="star-btn" data-rating="3">★</span>
+                  <span class="star-btn active" data-rating="1">★</span>
+                  <span class="star-btn active" data-rating="2">★</span>
+                  <span class="star-btn active" data-rating="3">★</span>
                   <span class="star-btn" data-rating="4">★</span>
                   <span class="star-btn" data-rating="5">★</span>
                 </div>
@@ -240,7 +240,7 @@
 
           <div class="toolbar-actions">
             <div class="search-box">
-              <input type="text" id="filterInput" name="leadFilterQuery" autocomplete="off" placeholder="Search leads..." oninput="filterLeads()" />
+              <input type="search" id="filterInput" name="leadFilterQueryNoAutofill" autocomplete="off" placeholder="Search leads..." oninput="filterLeads()" readonly onfocus="this.removeAttribute('readonly');" />
             </div>
 
             <button class="chip-btn" id="toolbarNoWebsiteBtn" onclick="toggleNoWebsiteFilter()">No Website Only</button>

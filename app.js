@@ -45,7 +45,7 @@ const state = {
   closedDeals: [],
   contactedPhones: new Set(),
   currentView: 'empty', // 'empty', 'grid', 'table', 'followups', 'closed'
-  minRating: 0,
+  minRating: 3,
   hasPhoneOnly: false,
   minReviews15: false,
   onlyWithoutWebsite: false,
@@ -521,8 +521,39 @@ function renderClosedDealsView() {
   });
 }
 
+function initStarPicker() {
+  const container = $('starPicker');
+  if (!container) return;
+
+  const stars = container.querySelectorAll('.star-btn');
+  stars.forEach(star => {
+    star.addEventListener('click', () => {
+      const rating = parseInt(star.getAttribute('data-rating'));
+      if (state.minRating === rating) {
+        state.minRating = 0;
+      } else {
+        state.minRating = rating;
+      }
+
+      stars.forEach(s => {
+        const r = parseInt(s.getAttribute('data-rating'));
+        if (r <= state.minRating) s.classList.add('active');
+        else s.classList.remove('active');
+      });
+
+      filterLeads();
+    });
+  });
+
+  stars.forEach(s => {
+    const r = parseInt(s.getAttribute('data-rating'));
+    if (r <= state.minRating) s.classList.add('active');
+    else s.classList.remove('active');
+  });
+}
+
 function resetFilters() {
-  state.minRating = 0;
+  state.minRating = 3;
   state.hasPhoneOnly = false;
   state.minReviews15 = false;
   state.onlyWithoutWebsite = false;
@@ -535,6 +566,16 @@ function resetFilters() {
   if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = false;
   if ($('hasPhoneOnlyToggle')) $('hasPhoneOnlyToggle').checked = false;
   if ($('minReviewsToggle')) $('minReviewsToggle').checked = false;
+
+  const container = $('starPicker');
+  if (container) {
+    const stars = container.querySelectorAll('.star-btn');
+    stars.forEach(s => {
+      const r = parseInt(s.getAttribute('data-rating'));
+      if (r <= state.minRating) s.classList.add('active');
+      else s.classList.remove('active');
+    });
+  }
 
   filterLeads();
 }
@@ -813,6 +854,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
   renderNichePills();
   loadNicheTemplates(state.activeNiche);
+  initStarPicker();
+
+  // Explicitly clear any browser autofilled text in search filter
+  if ($('filterInput')) $('filterInput').value = '';
 
   const slider = $('maxResultsSlider');
   if (slider) {
