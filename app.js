@@ -1183,8 +1183,12 @@ async function fetchFollowUpsFromDB() {
   }
   
   try {
-    // Select contacted leads for the active niche
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&niche=eq.${state.activeNiche}&order=contacted_at.asc`, {
+    // For coaching (default niche), also fetch NULL niche leads for backward compatibility with existing DB rows
+    const nicheFilter = state.activeNiche === 'coaching' 
+      ? `or=(niche.eq.coaching,niche.is.null)` 
+      : `niche=eq.${state.activeNiche}`;
+
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&${nicheFilter}&order=contacted_at.asc`, {
       method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
