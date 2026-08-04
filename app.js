@@ -255,15 +255,19 @@ document.addEventListener('DOMContentLoaded', () => {
     fetchContactedFromDB();
     fetchFollowUpsFromDB();
     fetchSearchHistoryFromDB();
-    fetchScrapedLeadsFromDB();
   }
 
-  // Restore active session if refreshed
+  // Restore active session if refreshed, or fetch from Supabase
   const restored = restoreActiveSession();
   if (restored) {
-    showToast(`⚡ Restored ${state.filteredLeads.length} leads from last session!`);
+    showToast(`⚡ Restored ${state.filteredLeads.length} leads from session!`);
   } else if (state.supabaseUrl && state.supabaseKey) {
-    fetchScrapedLeadsFromDB();
+    fetchScrapedLeadsFromDB().then(() => {
+      filterLeads();
+      renderGridView();
+      renderTableView();
+      showState('results');
+    });
   }
 });
 
@@ -548,7 +552,10 @@ function restoreActiveSession() {
       if (session.query && $('searchQuery')) $('searchQuery').value = session.query;
       if (session.location && $('locationQuery')) $('locationQuery').value = session.location;
       filterLeads();
+      renderGridView();
+      renderTableView();
       updateResultsMeta(session.query || 'Saved Search', session.location || '', state.filteredLeads.length);
+      showState('results');
       return true;
     }
   } catch (e) {
@@ -1589,6 +1596,7 @@ async function fetchScrapedLeadsFromDB() {
         updateResultsMeta(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase Scraped Leads', state.filteredLeads.length);
         
         saveActiveSession(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase', leads);
+        showState('results');
         return true;
       }
     }
