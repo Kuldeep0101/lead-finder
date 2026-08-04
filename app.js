@@ -1283,7 +1283,6 @@ function renderFollowUpsView() {
         </button>
       </div>
     `;
-    `;
     
     grid.appendChild(card);
   });
@@ -1298,6 +1297,21 @@ function sendFollowUpMessage(id, phone, name, currentCount) {
   // Replace variable
   const finalMessage = template.replace(/\[Name\]/ig, name || 'there');
     
+  // Format phone to digits only (strip + sign and spaces)
+  const cleanDigits = (phone || '').replace(/\D/g, '');
+  if (!cleanDigits) {
+    return showToast('⚠️ Invalid phone number for WhatsApp', 'warning');
+  }
+  
+  // Async update db to refresh the timer and increment the count
+  updateFollowUpInDB(id, currentCount + 1);
+  
+  // Open WA
+  const encodedMsg = encodeURIComponent(finalMessage);
+  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
+  openUrl(waUrl);
+}
+
 function renderClosedDealsView() {
   const grid = $('closedDealsGrid');
   if (!grid) return;
@@ -1370,11 +1384,16 @@ async function markDealClosed(id, phone, name) {
     console.warn('Mark deal closed failed:', err);
   }
 }
-  
-  // Open WA
-  const encodedMsg = encodeURIComponent(finalMessage);
-  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
-  openUrl(waUrl);
+
+function openSettingsModal() {
+  const modal = $('settingsModal');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function closeSettingsModal() {
+  const modal = $('settingsModal');
+  if (modal) modal.classList.add('hidden');
+  showToast('⚙️ Settings saved & applied!', 'success');
 }
 
 async function updateFollowUpInDB(id, newCount) {
