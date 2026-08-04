@@ -232,6 +232,13 @@ function promptAddNewNiche() {
 }
 
 // ─── Filtering Logic ─────────────────────────────────────────
+function hasNoWebsite(website) {
+  if (!website) return true;
+  const w = String(website).toLowerCase().trim();
+  if (w === '' || w === 'none' || w === 'n/a' || w === 'null' || w === 'no website' || w === '—') return true;
+  return false;
+}
+
 function filterLeads() {
   const query = $('filterInput') ? $('filterInput').value.toLowerCase().trim() : '';
   let list = state.leads || [];
@@ -252,7 +259,7 @@ function filterLeads() {
     if (state.minRating > 0 && (l.rating === null || l.rating < state.minRating)) return false;
     if (state.hasPhoneOnly && (!l.phone || !l.phone.trim())) return false;
     if (state.minReviews15 && l.reviewsCount < 15) return false;
-    if (state.onlyWithoutWebsite && l.website) return false;
+    if (state.onlyWithoutWebsite && !hasNoWebsite(l.website)) return false;
     if (state.onlyContacted && (!l.phone || !state.contactedPhones.has(l.phone))) return false;
     if (query) {
       const matchName = l.name.toLowerCase().includes(query);
