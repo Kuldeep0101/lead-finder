@@ -103,20 +103,25 @@
         </div>
       </div>
 
-      <!-- Main Navigation Tabs Bar -->
-      <div class="dashboard-nav-bar" id="dashboardNavBar">
-        <button class="dash-nav-tab active" id="tabSearch" onclick="setView('empty')">
-          🔍 Search Launcher
-        </button>
-        <button class="dash-nav-tab" id="tabResults" onclick="setView('grid')">
-          📋 Scraped Leads <span class="nav-count-badge" id="scrapedNavBadge">0</span>
-        </button>
-        <button class="dash-nav-tab" id="tabFollowups" onclick="setView('followups')">
-          💬 Contacted CRM <span class="nav-count-badge" id="contactedNavBadge">0</span>
-        </button>
-        <button class="dash-nav-tab" id="tabClosedDeals" onclick="setView('closed')">
-          ⭐ Closed Deals <span class="nav-count-badge gold-badge" id="closedNavBadge">0</span>
-        </button>
+      <!-- Compact Mobile Selectors Bar (Hidden on PC, visible on Mobile) -->
+      <div class="mobile-nav-bar-container">
+        <div class="mobile-select-row">
+          <div class="mobile-select-group">
+            <span class="mobile-select-label">Workspace</span>
+            <select id="nicheMobileSelect" class="mobile-dropdown-select" onchange="switchNiche(this.value)">
+              <!-- Populated dynamically -->
+            </select>
+          </div>
+          <div class="mobile-select-group">
+            <span class="mobile-select-label">View Tab</span>
+            <select id="navMobileSelect" class="mobile-dropdown-select" onchange="setView(this.value)">
+              <option value="empty">🔍 Search Launcher</option>
+              <option value="grid">📋 Scraped Leads</option>
+              <option value="followups">💬 Contacted CRM</option>
+              <option value="closed">⭐ Closed Deals</option>
+            </select>
+          </div>
+        </div>
       </div>
 
       <!-- VIEW 1: Search Launcher Workspace -->

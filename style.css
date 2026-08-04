@@ -968,6 +968,27 @@ body {
   width: 100%;
 }
 
+/* Header Bar */
+.app-header {
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-subtle);
+  padding: 12px 24px;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.header-hidden {
+  transform: translateY(-100%);
+}
+
+/* Mobile Nav Bar Container (Hidden on Desktop, Visible on Mobile) */
+.mobile-nav-bar-container {
+  display: none;
+}
+
 /* Toast Container */
 .toast-container {
   position: fixed;
@@ -997,17 +1018,145 @@ body {
 
 /* Mobile Responsiveness */
 @media (max-width: 768px) {
+  .app-header {
+    padding: 8px 12px;
+  }
+
   .header-container {
-    padding: 0 4px;
+    padding: 0;
   }
-  .leads-grid, .followups-grid, .closed-deals-grid {
-    grid-template-columns: 1fr;
+
+  .brand-logo {
+    font-size: 1rem;
+    gap: 6px;
   }
+
+  .brand-logo svg {
+    width: 18px;
+    height: 18px;
+  }
+
+  .icon-text-btn {
+    padding: 4px 8px;
+    font-size: 0.76rem;
+    gap: 4px;
+  }
+
+  .header-right {
+    gap: 6px;
+  }
+
+  /* Hide bulky desktop pill bars on mobile */
+  .niche-selector-container,
+  .dashboard-nav-bar {
+    display: none !important;
+  }
+
+  /* Show compact mobile dropdown select row */
+  .mobile-nav-bar-container {
+    display: block;
+    background: #ffffff;
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-md);
+    padding: 8px 12px;
+    margin-bottom: 12px;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .mobile-select-row {
+    display: flex;
+    gap: 8px;
+  }
+
+  .mobile-select-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .mobile-select-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+  }
+
+  .mobile-dropdown-select {
+    width: 100%;
+    background: var(--bg-primary);
+    border: 1px solid var(--border-subtle);
+    border-radius: var(--radius-sm);
+    padding: 6px 8px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    outline: none;
+  }
+
+  /* Declutter Scraped Leads Toolbar on Mobile */
   .toolbar-wrapper {
+    padding: 10px 12px;
+    gap: 8px;
+    margin-bottom: 12px;
     flex-direction: column;
     align-items: stretch;
   }
+
+  .toolbar-info {
+    gap: 8px;
+    width: 100%;
+  }
+
+  .toolbar-title {
+    font-size: 1.05rem;
+  }
+
+  .toolbar-subtitle {
+    font-size: 0.75rem;
+  }
+
+  .toolbar-actions {
+    width: 100%;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+
+  .search-box {
+    width: 100%;
+  }
+
   .search-box input {
     width: 100%;
+    padding: 6px 10px;
+    font-size: 0.82rem;
+  }
+
+  .chip-btn {
+    flex: 1;
+    padding: 5px 8px;
+    font-size: 0.75rem;
+    text-align: center;
+  }
+
+  .view-toggle-btns {
+    flex: 0 0 auto;
+  }
+
+  .export-btn {
+    flex: 1 1 100%;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    justify-content: center;
+  }
+
+  .main-layout {
+    padding: 10px 10px 40px 10px;
+  }
+
+  .leads-grid, .followups-grid, .closed-deals-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
   }
 }

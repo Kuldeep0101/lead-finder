@@ -118,6 +118,10 @@ function setView(viewName) {
   state.currentView = viewName;
   console.log(`[LeadMapper View] setView -> "${viewName}"`);
 
+  if ($('navMobileSelect')) {
+    $('navMobileSelect').value = (viewName === 'table') ? 'grid' : viewName;
+  }
+
   // Sections
   const emptyState = $('emptyState');
   const resultsArea = $('resultsArea');
@@ -176,7 +180,7 @@ function setView(viewName) {
 // ─── Workspace Switcher ──────────────────────────────────────
 function renderNichePills() {
   const container = $('nicheBar');
-  if (!container) return;
+  const mobileSelect = $('nicheMobileSelect');
 
   const defaultKeys = ['coaching', 'makeup', 'cardenting'];
   let html = defaultKeys.map(key => {
@@ -193,7 +197,21 @@ function renderNichePills() {
   html += `<button class="niche-pill" onclick="promptAddNewNiche()"><span>➕</span> Add Niche</button>`;
   html += `<button class="niche-pill" onclick="openImportModal()"><span>📥</span> Import Dataset</button>`;
 
-  container.innerHTML = html;
+  if (container) container.innerHTML = html;
+
+  if (mobileSelect) {
+    let mobileOptions = defaultKeys.map(key => {
+      const config = DEFAULT_NICHES[key];
+      const selected = state.activeNiche === key ? 'selected' : '';
+      return `<option value="${key}" ${selected}>${config.icon} ${config.name}</option>`;
+    }).join('');
+
+    state.customNiches.forEach(custom => {
+      const selected = state.activeNiche === custom.id ? 'selected' : '';
+      mobileOptions += `<option value="${custom.id}" ${selected}>${custom.icon} ${custom.name}</option>`;
+    });
+    mobileSelect.innerHTML = mobileOptions;
+  }
 }
 
 function loadNicheTemplates(nicheKey) {
@@ -907,6 +925,20 @@ document.addEventListener('DOMContentLoaded', () => {
   $('outreachFollowupTemplate')?.addEventListener('input', (e) => {
     state.outreachFollowupTemplate = e.target.value;
     localStorage.setItem(`outreach_followup_template_${state.activeNiche}`, state.outreachFollowupTemplate);
+  });
+
+  let lastScrollY = window.scrollY;
+  window.addEventListener('scroll', () => {
+    const currentScrollY = window.scrollY;
+    const header = $('header');
+    if (!header) return;
+
+    if (currentScrollY > 40 && currentScrollY > lastScrollY) {
+      header.classList.add('header-hidden');
+    } else {
+      header.classList.remove('header-hidden');
+    }
+    lastScrollY = currentScrollY;
   });
 
   const restored = restoreActiveSession();
