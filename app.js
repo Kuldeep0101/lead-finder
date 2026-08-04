@@ -519,17 +519,23 @@ function saveActiveSession(query, location, leads) {
       query: query || 'Scraped Leads',
       location: location || '',
       leads: leads,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      niche: state.activeNiche
     };
-    localStorage.setItem('leadmapper_active_session', JSON.stringify(sessionData));
+    localStorage.setItem(`leadmapper_active_session_${state.activeNiche}`, JSON.stringify(sessionData));
   } catch (e) {
     console.warn('Could not cache session to localStorage', e);
   }
 }
 
 function restoreActiveSession() {
-  const saved = localStorage.getItem('leadmapper_active_session');
-  if (!saved) return false;
+  const saved = localStorage.getItem(`leadmapper_active_session_${state.activeNiche}`);
+  if (!saved) {
+    state.leads = [];
+    state.filteredLeads = [];
+    if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
+    return false;
+  }
 
   try {
     const session = JSON.parse(saved);
@@ -539,12 +545,14 @@ function restoreActiveSession() {
       if (session.location && $('locationQuery')) $('locationQuery').value = session.location;
       filterLeads();
       updateResultsMeta(session.query || 'Saved Search', session.location || '', state.filteredLeads.length);
-      showState('results');
       return true;
     }
   } catch (e) {
     console.warn('Failed to restore active session', e);
   }
+  state.leads = [];
+  state.filteredLeads = [];
+  if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
   return false;
 }
 async function startApifyRun(apiKey, input) {
@@ -1101,11 +1109,18 @@ function switchNiche(nicheKey) {
   if ($('crmNicheTitle')) $('crmNicheTitle').textContent = config.name;
   if ($('closedNicheTitle')) $('closedNicheTitle').textContent = config.name;
 
-  if ($('searchQuery') && !$('searchQuery').value.trim()) {
-    $('searchQuery').value = config.defaultQuery;
-  }
-  if ($('locationQuery') && !$('locationQuery').value.trim()) {
-    $('locationQuery').value = config.defaultLocation;
+  if ($('searchQuery')) $('searchQuery').value = config.defaultQuery;
+  if ($('locationQuery')) $('locationQuery').value = config.defaultLocation;
+
+  // Restore scraped leads for THIS active niche only
+  const restored = restoreActiveSession();
+  if (!restored) {
+    state.leads = [];
+    state.filteredLeads = [];
+    if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
+    showState('empty');
+  } else {
+    showState('results');
   }
 
   // Refetch leads & CRM for new niche
