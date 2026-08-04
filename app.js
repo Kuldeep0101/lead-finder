@@ -823,50 +823,39 @@ function setView(view) {
   const table = $('tableWrapper');
   const gridBtn = $('viewGrid');
   const tableBtn = $('viewTable');
-  const followBtn = $('viewFollowups');
 
   if (view === 'grid' || view === 'table') {
-    if (state.leads.length === 0) {
-      fetchScrapedLeadsFromDB().then(found => {
-        if (!found && state.leads.length === 0) {
-          showToast('ℹ️ No scraped leads found. Generate leads or import dataset!', 'info');
-          showState('empty');
-        }
-      });
-    } else {
-      showState('results');
-    }
+    showState('results');
+    filterLeads();
+    renderGridView();
+    renderTableView();
+
+    fetchScrapedLeadsFromDB().then(() => {
+      filterLeads();
+      renderGridView();
+      renderTableView();
+    });
 
     if (view === 'grid') {
-      grid.classList.remove('hidden');
-      table.classList.add('hidden');
-      $('followupsArea')?.classList.add('hidden');
-      $('closedDealsArea')?.classList.add('hidden');
-      gridBtn.classList.add('active');
-      tableBtn.classList.remove('active');
-      if (followBtn) followBtn.classList.remove('active');
+      if (grid) grid.classList.remove('hidden');
+      if (table) table.classList.add('hidden');
+      if (gridBtn) gridBtn.classList.add('active');
+      if (tableBtn) tableBtn.classList.remove('active');
     } else {
-      grid.classList.add('hidden');
-      table.classList.remove('hidden');
-      $('followupsArea')?.classList.add('hidden');
-      $('closedDealsArea')?.classList.add('hidden');
-      tableBtn.classList.add('active');
-      gridBtn.classList.remove('active');
-      if (followBtn) followBtn.classList.remove('active');
+      if (grid) grid.classList.add('hidden');
+      if (table) table.classList.remove('hidden');
+      if (tableBtn) tableBtn.classList.add('active');
+      if (gridBtn) gridBtn.classList.remove('active');
     }
   } else if (view === 'followups') {
     showState('followups');
-    $('followupsArea')?.classList.remove('hidden');
-    $('closedDealsArea')?.classList.add('hidden');
-    if (followBtn) followBtn.classList.add('active');
-    gridBtn.classList.remove('active');
-    tableBtn.classList.remove('active');
+    if ($('followupsArea')) $('followupsArea').classList.remove('hidden');
+    if ($('closedDealsArea')) $('closedDealsArea').classList.add('hidden');
     fetchFollowUpsFromDB();
   } else if (view === 'closed') {
     showState('closed');
-    $('followupsArea')?.classList.add('hidden');
-    $('closedDealsArea')?.classList.remove('hidden');
-    if ($('tabClosedDeals')) $('tabClosedDeals').classList.add('active');
+    if ($('followupsArea')) $('followupsArea').classList.add('hidden');
+    if ($('closedDealsArea')) $('closedDealsArea').classList.remove('hidden');
     fetchFollowUpsFromDB();
   }
 }
@@ -1121,22 +1110,18 @@ function switchNiche(nicheKey) {
   if ($('searchQuery')) $('searchQuery').value = config.defaultQuery;
   if ($('locationQuery')) $('locationQuery').value = config.defaultLocation;
 
-  // Restore scraped leads for THIS active niche only
-  const restored = restoreActiveSession();
-  if (!restored) {
-    state.leads = [];
-    state.filteredLeads = [];
-    if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
-    showState('empty');
-  } else {
-    showState('results');
-  }
+  state.leads = [];
+  state.filteredLeads = [];
 
   // Refetch leads & CRM for new niche
   fetchContactedFromDB();
   fetchFollowUpsFromDB();
   fetchSearchHistoryFromDB();
-  fetchScrapedLeadsFromDB();
+  fetchScrapedLeadsFromDB().then(() => {
+    filterLeads();
+    renderGridView();
+    renderTableView();
+  });
 }
 
 function getNicheConfig(key) {
