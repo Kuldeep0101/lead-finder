@@ -363,25 +363,85 @@ function renderFollowUpsView() {
     return;
   }
 
+  const now = new Date();
+
   state.followups.forEach(item => {
     const card = document.createElement('div');
     card.className = 'followup-card';
+    
+    const contactedDate = item.contacted_at ? new Date(item.contacted_at) : new Date();
+    const diffMs = now - contactedDate;
+    const diffHours = diffMs / (1000 * 60 * 60);
+    const diffDays = Math.floor(diffHours / 24);
+    
+    let badgeHtml = '';
+    let actionBtnHtml = '';
+
+    if (diffDays < 3) {
+      const daysLeft = 3 - diffDays;
+      const hoursLeft = Math.ceil(72 - diffHours);
+      const waitStr = daysLeft > 1 ? `${daysLeft}d left` : `${hoursLeft}h left`;
+      
+      badgeHtml = `<span class="status-pill waiting">⏳ Contacted (${diffDays}d ago)</span>`;
+      actionBtnHtml = `<button class="card-action-btn disabled-btn" disabled title="Follow-up unlocks after 3 days of waiting">⏳ Follow up (${waitStr})</button>`;
+    } else if (diffDays < 7) {
+      badgeHtml = `<span class="status-pill ready">💬 Ready for Follow-up (${diffDays}d ago)</span>`;
+      actionBtnHtml = `<button class="card-action-btn whatsapp-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'followup')">💬 Follow up</button>`;
+    } else {
+      badgeHtml = `<span class="status-pill urgent">🔥 Final Reminder (${diffDays}d ago)</span>`;
+      actionBtnHtml = `<button class="card-action-btn warning-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'final')">🔥 Final Reminder</button>`;
+    }
+
     card.innerHTML = `
       <div class="card-header">
         <span class="card-name">${escapeHtml(item.name || 'Lead')}</span>
-        <span class="card-num">Contacted</span>
+        ${badgeHtml}
       </div>
       <div class="card-details">
         <div class="card-detail-row">📞 ${item.phone}</div>
-        <div class="card-detail-row">🕒 Contacted: ${item.contacted_at ? new Date(item.contacted_at).toLocaleDateString() : 'Today'}</div>
+        <div class="card-detail-row">🕒 Last Outreach: ${contactedDate.toLocaleDateString()} (${diffDays} days ago)</div>
       </div>
       <div class="card-actions">
-        <button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${item.phone}')">💬 Re-engage</button>
+        ${actionBtnHtml}
         <button class="card-action-btn" onclick="markDealClosed('${item.phone}')">⭐ Mark Won</button>
       </div>
     `;
     grid.appendChild(card);
   });
+}
+
+async function openFollowupWhatsApp(phone, leadName, type) {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  const config = getNicheConfig(state.activeNiche);
+
+  let message = '';
+  if (type === 'final') {
+    message = `Hi ${leadName}, final check-in from my side. Should I close your file for now or are you still open to discussing acquiring new clients for your business?`;
+  } else {
+    message = config.followup ? config.followup.replace(/\[Name\]/g, leadName) : `Hi ${leadName}, following up on my previous note. Would love to connect regarding your business.`;
+  }
+
+  const url = `https://wa.me/${cleanPhone.replace('+', '')}?text=${encodeURIComponent(message)}`;
+  window.open(url, '_blank');
+
+  // Reset timer on outreach send by updating contacted_at in Supabase
+  if (state.supabaseUrl && state.supabaseKey) {
+    try {
+      await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?phone=eq.${cleanPhone}`, {
+        method: 'PATCH',
+        headers: {
+          'apikey': state.supabaseKey,
+          'Authorization': `Bearer ${state.supabaseKey}`,
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({
+          contacted_at: new Date().toISOString()
+        })
+      });
+      fetchFollowUpsFromDB();
+    } catch(e) {}
+  }
 }
 
 function renderClosedDealsView() {
