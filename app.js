@@ -672,7 +672,14 @@ function applyRatingFilter(leads) {
 // ─── Rendering ────────────────────────────────────────────────
 function renderGridView() {
   const grid = $('leadsGrid');
-  if (!grid) return;
+  if (!grid) {
+    console.error('🔍 [LeadMapper Debug] renderGridView: #leadsGrid NOT FOUND in DOM!');
+    return;
+  }
+
+  const resultsArea = $('resultsArea');
+  console.log(`🔍 [LeadMapper Debug] renderGridView called. filteredLeads=${state.filteredLeads.length}, #resultsArea hidden=${resultsArea ? resultsArea.classList.contains('hidden') : 'NOT FOUND'}, #leadsGrid hidden=${grid.classList.contains('hidden')}`);
+
   grid.innerHTML = '';
 
   if (!state.filteredLeads || state.filteredLeads.length === 0) {
@@ -688,14 +695,23 @@ function renderGridView() {
         </button>
       </div>
     `;
+    console.log('🔍 [LeadMapper Debug] renderGridView: rendered empty state (0 leads after filter)');
     return;
   }
 
+  let cardsAdded = 0;
   state.filteredLeads.forEach((lead, i) => {
-    const card = createLeadCard(lead, i);
-    card.style.animationDelay = `${Math.min(i * 40, 600)}ms`;
-    grid.appendChild(card);
+    try {
+      const card = createLeadCard(lead, i);
+      card.style.animationDelay = `${Math.min(i * 40, 600)}ms`;
+      grid.appendChild(card);
+      cardsAdded++;
+    } catch(err) {
+      console.error(`🔍 [LeadMapper Debug] renderGridView: ERROR creating card for lead[${i}] "${lead.name}":`, err);
+    }
   });
+
+  console.log(`🔍 [LeadMapper Debug] renderGridView: DONE — ${cardsAdded} cards appended to #leadsGrid. DOM children count=${grid.children.length}`);
 }
 
 function createLeadCard(lead, idx) {
