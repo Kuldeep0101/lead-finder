@@ -31,7 +31,7 @@ const state = {
   filteredLeads: [],
   currentView: 'grid',
   minRating: 0,
-  hasPhoneOnly: true,
+  hasPhoneOnly: false,
   minReviews15: false,
   onlyWithoutWebsite: false,
   onlyContacted: false,
@@ -672,7 +672,24 @@ function applyRatingFilter(leads) {
 // ─── Rendering ────────────────────────────────────────────────
 function renderGridView() {
   const grid = $('leadsGrid');
+  if (!grid) return;
   grid.innerHTML = '';
+
+  if (!state.filteredLeads || state.filteredLeads.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); margin-top: 10px;">
+        <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
+        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">No leads match your current filters</h3>
+        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 400px; margin: 0 auto 16px auto;">
+          Try clearing filters or search query to see all scraped leads.
+        </p>
+        <button onclick="resetFilters()" class="secondary-btn" style="width: auto; margin: 0 auto; display: inline-flex;">
+          🔄 Reset All Filters
+        </button>
+      </div>
+    `;
+    return;
+  }
 
   state.filteredLeads.forEach((lead, i) => {
     const card = createLeadCard(lead, i);
@@ -837,12 +854,6 @@ function setView(view) {
     renderGridView();
     renderTableView();
 
-    fetchScrapedLeadsFromDB().then(() => {
-      filterLeads();
-      renderGridView();
-      renderTableView();
-    });
-
     if (view === 'grid') {
       if (grid) grid.classList.remove('hidden');
       if (table) table.classList.add('hidden');
@@ -854,6 +865,20 @@ function setView(view) {
       if (tableBtn) tableBtn.classList.add('active');
       if (gridBtn) gridBtn.classList.remove('active');
     }
+
+    fetchScrapedLeadsFromDB().then(() => {
+      filterLeads();
+      renderGridView();
+      renderTableView();
+      showState('results');
+      if (view === 'grid') {
+        if (grid) grid.classList.remove('hidden');
+        if (table) table.classList.add('hidden');
+      } else {
+        if (grid) grid.classList.add('hidden');
+        if (table) table.classList.remove('hidden');
+      }
+    });
   } else if (view === 'followups') {
     showState('followups');
     if ($('followupsArea')) $('followupsArea').classList.remove('hidden');
@@ -865,6 +890,29 @@ function setView(view) {
     if ($('closedDealsArea')) $('closedDealsArea').classList.remove('hidden');
     fetchFollowUpsFromDB();
   }
+}
+
+function resetFilters() {
+  state.minRating = 0;
+  state.hasPhoneOnly = false;
+  state.minReviews15 = false;
+  state.onlyWithoutWebsite = false;
+  state.onlyContacted = false;
+  
+  if ($('filterInput')) $('filterInput').value = '';
+  if ($('toolbarNoWebsiteBtn')) $('toolbarNoWebsiteBtn').classList.remove('active');
+  if ($('toolbarContactedBtn')) $('toolbarContactedBtn').classList.remove('active');
+  if ($('onlyWithoutWebsiteToggle')) $('onlyWithoutWebsiteToggle').checked = false;
+  if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = false;
+  if ($('hasPhoneOnlyToggle')) $('hasPhoneOnlyToggle').checked = false;
+  if ($('minReviewsToggle')) $('minReviewsToggle').checked = false;
+
+  localStorage.removeItem('only_without_website');
+  localStorage.removeItem('only_contacted');
+  localStorage.removeItem('has_phone_only');
+  localStorage.removeItem('min_reviews_15');
+
+  filterLeads();
 }
 
 // ─── Filter ───────────────────────────────────────────────────
