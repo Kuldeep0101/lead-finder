@@ -196,6 +196,18 @@ function renderNichePills() {
   container.innerHTML = html;
 }
 
+function loadNicheTemplates(nicheKey) {
+  const config = getNicheConfig(nicheKey);
+  const savedTpl = localStorage.getItem(`outreach_template_${nicheKey}`) || config.template || 'Hi [Name], reaching out regarding your business...';
+  const savedFol = localStorage.getItem(`outreach_followup_template_${nicheKey}`) || config.followup || 'Hi [Name], following up on my previous note...';
+
+  state.outreachTemplate = savedTpl;
+  state.outreachFollowupTemplate = savedFol;
+
+  if ($('outreachTemplate')) $('outreachTemplate').value = savedTpl;
+  if ($('outreachFollowupTemplate')) $('outreachFollowupTemplate').value = savedFol;
+}
+
 function switchNiche(nicheKey) {
   state.activeNiche = nicheKey;
   renderNichePills();
@@ -206,6 +218,7 @@ function switchNiche(nicheKey) {
   if ($('locationQuery')) $('locationQuery').value = config.defaultLocation;
   if ($('crmNicheTitle')) $('crmNicheTitle').textContent = config.name;
 
+  loadNicheTemplates(nicheKey);
   restoreActiveSession();
   fetchScrapedLeadsFromDB();
   fetchFollowUpsFromDB();
@@ -799,6 +812,24 @@ document.addEventListener('DOMContentLoaded', () => {
   if (savedSbKey) state.supabaseKey = savedSbKey;
 
   renderNichePills();
+  loadNicheTemplates(state.activeNiche);
+
+  const slider = $('maxResultsSlider');
+  if (slider) {
+    slider.addEventListener('input', (e) => {
+      if ($('rangeValue')) $('rangeValue').textContent = e.target.value;
+    });
+  }
+
+  $('outreachTemplate')?.addEventListener('input', (e) => {
+    state.outreachTemplate = e.target.value;
+    localStorage.setItem(`outreach_template_${state.activeNiche}`, state.outreachTemplate);
+  });
+
+  $('outreachFollowupTemplate')?.addEventListener('input', (e) => {
+    state.outreachFollowupTemplate = e.target.value;
+    localStorage.setItem(`outreach_followup_template_${state.activeNiche}`, state.outreachFollowupTemplate);
+  });
 
   const restored = restoreActiveSession();
   fetchScrapedLeadsFromDB();

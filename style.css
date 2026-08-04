@@ -403,6 +403,33 @@ body {
   font-size: 0.9rem;
 }
 
+.templates-grid {
+  margin-bottom: 20px;
+}
+
+.template-textarea {
+  resize: vertical;
+  min-height: 76px;
+  font-family: inherit;
+  font-size: 0.85rem;
+  line-height: 1.4;
+}
+
+.field-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.field-hint code {
+  background: var(--bg-primary);
+  padding: 1px 5px;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+  color: var(--accent-primary);
+  font-family: monospace;
+}
+
 .filter-controls-row {
   display: flex;
   flex-wrap: wrap;

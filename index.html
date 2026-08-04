@@ -145,9 +145,9 @@
               <div class="form-group slider-group">
                 <div class="slider-header">
                   <label class="form-label">Max Leads Limit</label>
-                  <span id="rangeValue" class="slider-val">50</span>
+                  <span id="rangeValue" class="slider-val">100</span>
                 </div>
-                <input type="range" id="maxResultsSlider" min="5" max="300" step="5" value="50" class="range-slider" />
+                <input type="range" id="maxResultsSlider" min="5" max="300" step="5" value="100" class="range-slider" />
               </div>
 
               <div class="star-rating-box">
@@ -184,6 +184,20 @@
                 <input type="checkbox" id="onlyContactedToggle" />
                 <span>Contacted Only</span>
               </label>
+            </div>
+
+            <!-- Outreach WhatsApp Message Templates -->
+            <div class="form-grid templates-grid">
+              <div class="form-group">
+                <label class="form-label">Initial WhatsApp Outreach Message Template</label>
+                <textarea id="outreachTemplate" class="form-input template-textarea" rows="3" placeholder="Hi [Name], reaching out regarding your business in [Location]..."></textarea>
+                <span class="field-hint">Dynamic tags: <code>[Name]</code>, <code>[Location]</code></span>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Follow-up WhatsApp Message Template</label>
+                <textarea id="outreachFollowupTemplate" class="form-input template-textarea" rows="3" placeholder="Hi [Name], following up on my previous note..."></textarea>
+                <span class="field-hint">Dynamic tags: <code>[Name]</code>, <code>[Location]</code></span>
+              </div>
             </div>
 
             <button type="submit" class="primary-btn run-scraper-btn" id="generateBtn">
