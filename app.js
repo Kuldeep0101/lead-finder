@@ -3,7 +3,22 @@
    Uses Apify Google Maps Scraper (compass/crawler-google-places)
    ============================================================ */
 
-'use strict';
+// ─── Global Error & Debug Logger ──────────────────────────────
+window.addEventListener('error', (event) => {
+  const errorMsg = `🚨 App Error: ${event.message} (${event.filename?.split('/').pop()}:${event.lineno})`;
+  console.error(errorMsg, event.error);
+  if (typeof showToast === 'function') {
+    showToast(errorMsg, 'error');
+  }
+});
+
+window.addEventListener('unhandledrejection', (event) => {
+  const errorMsg = `🚨 Async Error: ${event.reason?.message || event.reason}`;
+  console.error(errorMsg, event.reason);
+  if (typeof showToast === 'function') {
+    showToast(errorMsg, 'error');
+  }
+});
 
 const NICHES = {
   coaching: { id: 'coaching', name: 'Coaching Institutes', icon: '🎓', defaultQuery: 'NEET IIT JEE SSC Coaching centers', defaultLocation: 'Patna, Bihar, India', template: 'Hi [Name], I noticed your coaching institute in [Location] has [Reviews] reviews. Would you like a high-converting website to double student admissions?', followup: 'Hi [Name], just floating this to the top of your inbox. Let me know if you are open for a quick 2-min demo!' },
