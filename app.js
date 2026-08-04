@@ -392,6 +392,8 @@ function renderFollowUpsView() {
       actionBtnHtml = `<button class="card-action-btn warning-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'final')">🔥 Final Reminder</button>`;
     }
 
+    const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
+
     card.innerHTML = `
       <div class="card-header">
         <span class="card-name">${escapeHtml(item.name || 'Lead')}</span>
@@ -403,12 +405,41 @@ function renderFollowUpsView() {
       </div>
       <div class="card-actions">
         ${actionBtnHtml}
-        <button class="card-action-btn" onclick="markDealClosed('${item.phone}')">⭐ Mark Won</button>
+        <div class="card-dropdown-wrapper">
+          <button class="card-action-btn dots-btn" onclick="toggleCardDropdown(event, '${cleanPhone}')" title="More options">
+            ⋮
+          </button>
+          <div class="card-dropdown-menu hidden" id="dropdown-${cleanPhone}">
+            <button class="dropdown-item" onclick="markDealClosed('${item.phone}')">
+              ⭐ Mark as Won Deal
+            </button>
+          </div>
+        </div>
       </div>
     `;
     grid.appendChild(card);
   });
 }
+
+function toggleCardDropdown(e, cleanPhone) {
+  e.stopPropagation();
+  const menuId = `dropdown-${cleanPhone}`;
+  const targetMenu = $(menuId);
+
+  document.querySelectorAll('.card-dropdown-menu').forEach(el => {
+    if (el.id !== menuId) el.classList.add('hidden');
+  });
+
+  if (targetMenu) {
+    targetMenu.classList.toggle('hidden');
+  }
+}
+
+document.addEventListener('click', () => {
+  document.querySelectorAll('.card-dropdown-menu').forEach(el => {
+    el.classList.add('hidden');
+  });
+});
 
 async function openFollowupWhatsApp(phone, leadName, type) {
   if (!phone) return;

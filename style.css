@@ -757,6 +757,60 @@ body {
   background: #d97706 !important;
 }
 
+/* 3-Dots Dropdown Menu */
+.card-dropdown-wrapper {
+  position: relative;
+  display: inline-block;
+}
+
+.dots-btn {
+  flex: 0 0 auto !important;
+  width: 32px !important;
+  padding: 0 !important;
+  font-size: 1.1rem !weight: 700;
+  color: var(--text-secondary);
+}
+
+.dots-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--accent-primary);
+}
+
+.card-dropdown-menu {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
+  margin-bottom: 6px;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-sm);
+  box-shadow: 0 6px 20px rgba(15, 23, 42, 0.15);
+  z-index: 90;
+  min-width: 170px;
+  overflow: hidden;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transition: var(--transition);
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+  color: var(--accent-primary);
+}
+
 .status-pill {
   font-size: 0.72rem;
   font-weight: 700;
