@@ -940,7 +940,9 @@ function filterLeads() {
 
   renderGridView();
   renderTableView();
-  $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
+  if ($('totalCountText')) {
+    $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
+  }
 }
 
 // ─── Outreach Engine ──────────────────────────────────────────
@@ -1556,6 +1558,7 @@ async function saveSearchToDB(query, location, resultsData = null) {
 function renderSearchHistory(historyItems) {
   const container = $('recentSearchesSection');
   const list = $('recentSearchesList');
+  if (!container || !list) return;
   
   if (!historyItems || historyItems.length === 0) {
     container.classList.add('hidden');
