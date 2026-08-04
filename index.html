@@ -80,7 +80,29 @@
   <main class="main-layout full-width-layout">
     <!-- Main Dashboard -->
     <section class="dashboard full-width-dashboard" id="dashboard">
-      <!-- Navigation Tabs Bar (Matching Screenshot UI) -->
+      <!-- Top Niche Bar (Active Workspaces on top) -->
+      <div class="niche-selector-container">
+        <div class="niche-label">Active Workspaces:</div>
+        <div class="niche-scroll-wrapper" id="nicheBar">
+          <button class="niche-pill active" data-niche="coaching" onclick="switchNiche('coaching')">
+            <span>🎓</span> Coaching Institutes
+          </button>
+          <button class="niche-pill" data-niche="makeup" onclick="switchNiche('makeup')">
+            <span>💄</span> Bridal & Spa
+          </button>
+          <button class="niche-pill" data-niche="cardenting" onclick="switchNiche('cardenting')">
+            <span>🚗</span> Car Decoration & Denting
+          </button>
+          <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
+            <span>➕</span> Add Niche
+          </button>
+          <button class="niche-pill import-niche-pill" onclick="openImportModal()" title="Import Dataset ID or JSON to active niche">
+            <span>📥</span> Import Dataset ID / JSON
+          </button>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs Bar (Below Active Workspaces) -->
       <div class="dashboard-nav-bar" id="dashboardNavBar">
         <button class="dash-nav-tab active" id="tabSearch" onclick="showState('empty')" title="Search & Scrape Launcher">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -114,28 +136,6 @@
           </svg>
           Settings
         </button>
-      </div>
-
-      <!-- Top Niche Bar -->
-      <div class="niche-selector-container">
-        <div class="niche-label">Active Workspaces:</div>
-        <div class="niche-scroll-wrapper" id="nicheBar">
-          <button class="niche-pill active" data-niche="coaching" onclick="switchNiche('coaching')">
-            <span>🎓</span> Coaching Institutes
-          </button>
-          <button class="niche-pill" data-niche="makeup" onclick="switchNiche('makeup')">
-            <span>💄</span> Bridal & Spa
-          </button>
-          <button class="niche-pill" data-niche="cardenting" onclick="switchNiche('cardenting')">
-            <span>🚗</span> Car Decoration & Denting
-          </button>
-          <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
-            <span>➕</span> Add Niche
-          </button>
-          <button class="niche-pill import-niche-pill" onclick="openImportModal()" title="Import Dataset ID or JSON to active niche">
-            <span>📥</span> Import Dataset ID / JSON
-          </button>
-        </div>
       </div>
 
       <!-- Functional Search & Scrape Launcher Workspace -->
