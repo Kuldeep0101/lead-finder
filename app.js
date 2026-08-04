@@ -245,11 +245,34 @@ function promptAddNewNiche() {
 }
 
 // ─── Filtering Logic ─────────────────────────────────────────
-function hasNoWebsite(website) {
-  if (!website) return true;
+function getWebsiteStatus(website) {
+  if (!website) return { isPoor: true, type: 'none', label: 'No Website', badgeClass: 'no-website-tag' };
+
   const w = String(website).toLowerCase().trim();
-  if (w === '' || w === 'none' || w === 'n/a' || w === 'null' || w === 'no website' || w === '—') return true;
-  return false;
+  if (w === '' || w === 'none' || w === 'n/a' || w === 'null' || w === 'no website' || w === '—') {
+    return { isPoor: true, type: 'none', label: 'No Website', badgeClass: 'no-website-tag' };
+  }
+
+  const poorSubdomains = [
+    '.business.site',
+    '.wixsite.com',
+    '.site123.me',
+    '.wordpress.com',
+    '.weebly.com',
+    '.blogspot.com',
+    '.jimdosite.com'
+  ];
+
+  const matched = poorSubdomains.find(sub => w.includes(sub));
+  if (matched) {
+    return { isPoor: true, type: 'subdomain', label: `Subdomain (${matched})`, badgeClass: 'poor-website-tag' };
+  }
+
+  return { isPoor: false, type: 'custom', label: 'Custom Website', badgeClass: '' };
+}
+
+function hasNoWebsite(website) {
+  return getWebsiteStatus(website).isPoor;
 }
 
 function filterLeads() {
@@ -329,6 +352,16 @@ function renderGridView() {
     const waClass = isContacted ? 'contacted-btn' : 'whatsapp-btn';
     const waText = isContacted ? '✓ Contacted' : '💬 WhatsApp';
 
+    const webStatus = getWebsiteStatus(lead.website);
+    let webHtml = '';
+    if (webStatus.type === 'none') {
+      webHtml = `<div class="card-detail-row">🌐 <span class="no-website-tag">No Website</span></div>`;
+    } else if (webStatus.type === 'subdomain') {
+      webHtml = `<div class="card-detail-row">🌐 <a href="https://${lead.website}" target="_blank">${truncate(lead.website, 22)}</a> <span class="poor-website-tag">Subdomain</span></div>`;
+    } else {
+      webHtml = `<div class="card-detail-row">🌐 <a href="https://${lead.website}" target="_blank">${truncate(lead.website, 28)}</a></div>`;
+    }
+
     card.innerHTML = `
       <div class="card-header">
         <span class="card-name">${escapeHtml(lead.name)}</span>
@@ -340,7 +373,7 @@ function renderGridView() {
       </div>
       <div class="card-details">
         ${lead.phone ? `<div class="card-detail-row">📞 ${lead.phone}</div>` : ''}
-        ${lead.website ? `<div class="card-detail-row">🌐 <a href="https://${lead.website}" target="_blank">${truncate(lead.website, 28)}</a></div>` : '<div class="card-detail-row">🌐 No website</div>'}
+        ${webHtml}
         <div class="card-detail-row">📍 ${truncate(lead.address, 35)}</div>
       </div>
       <div class="card-actions">
