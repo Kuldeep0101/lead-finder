@@ -254,12 +254,120 @@ function promptAddNewNiche() {
     name: name.trim(),
     icon: icon.trim(),
     defaultQuery: `${name.trim()} businesses`,
-    defaultLocation: 'Mumbai, India'
+    defaultLocation: 'Mumbai, India',
+    template: `Hi [Name], I noticed your business in [Location]. Reaching out regarding new client acquisition. Are you taking on new clients this month?`,
+    followup: `Hi [Name], following up on my previous note. Would love to connect regarding growing your business in [Location].`
   };
 
   state.customNiches.push(newNiche);
   localStorage.setItem('custom_niches', JSON.stringify(state.customNiches));
   switchNiche(cleanId);
+}
+
+// ─── Apify Scraper & Database Save Handlers ─────────────────
+async function saveScrapedLeadsToDB(leads) {
+  if (!state.supabaseUrl || !state.supabaseKey || !leads || leads.length === 0) return;
+  try {
+    const payload = leads.map(l => ({
+      name: l.name,
+      category: l.category,
+      rating: l.rating,
+      reviews_count: l.reviewsCount,
+      phone: l.phone,
+      website: l.website,
+      address: l.address,
+      google_maps_url: l.googleMapsUrl,
+      niche: state.activeNiche,
+      created_at: new Date().toISOString()
+    }));
+
+    await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads`, {
+      method: 'POST',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`,
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
+      },
+      body: JSON.stringify(payload)
+    });
+  } catch(err) {
+    console.warn('Error saving scraped leads to Supabase:', err);
+  }
+}
+
+async function handleSearch(e) {
+  e.preventDefault();
+  const query = $('searchQuery') ? $('searchQuery').value.trim() : '';
+  const location = $('locationQuery') ? $('locationQuery').value.trim() : '';
+  const maxResults = $('maxResultsSlider') ? parseInt($('maxResultsSlider').value) : 100;
+
+  if (!query || !location) {
+    showToast('Please enter category and location', 'error');
+    return;
+  }
+
+  if (!state.apifyApiKey) {
+    showToast('Apify API Key required. Please configure in Settings.', 'error');
+    openSettingsModal();
+    return;
+  }
+
+  if ($('loadingState')) $('loadingState').classList.remove('hidden');
+  if ($('emptyState')) $('emptyState').classList.add('hidden');
+  if ($('errorState')) $('errorState').classList.add('hidden');
+  if ($('loadingMsg')) $('loadingMsg').textContent = `Scraping Google Maps for "${query} in ${location}" (Max ${maxResults} leads)...`;
+
+  try {
+    const response = await fetch(`https://api.apify.com/v2/acts/${ACTOR_ID}/run-sync-get-dataset-items?token=${state.apifyApiKey}&timeout=120`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        searchStringsArray: [`${query} in ${location}`],
+        maxCrawledPlacesPerSearch: maxResults,
+        language: 'en'
+      })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Apify API returned error status ${response.status}`);
+    }
+
+    const items = await response.json();
+    if (!items || !Array.isArray(items) || items.length === 0) {
+      showToast('No results found on Google Maps for this search query', 'error');
+      setView('empty');
+      return;
+    }
+
+    const newLeads = items.map((item, idx) => ({
+      num: idx + 1,
+      name: item.title || item.name || 'Unknown Business',
+      category: item.categoryName || item.category || '—',
+      rating: item.totalScore ? parseFloat(item.totalScore) : (item.rating ? parseFloat(item.rating) : null),
+      reviewsCount: item.reviewsCount || item.reviews_count || 0,
+      phone: item.phoneUnformatted || item.phone || null,
+      website: item.website || null,
+      address: item.address || '—',
+      googleMapsUrl: item.url || item.googleMapsUrl || null,
+      niche: state.activeNiche
+    }));
+
+    state.leads = newLeads;
+    filterLeads();
+
+    // Save newly scraped leads to Supabase table under active workspace niche!
+    saveScrapedLeadsToDB(newLeads);
+
+    saveActiveSession(query, location, newLeads);
+    showToast(`🎉 Scraped ${newLeads.length} leads for ${getNicheConfig(state.activeNiche).name}!`);
+    setView('grid');
+  } catch (err) {
+    console.error('Apify scraping error:', err);
+    if ($('errorMessage')) $('errorMessage').textContent = err.message || 'Scraping failed. Check your Apify API token and try again.';
+    if ($('errorState')) $('errorState').classList.remove('hidden');
+    if ($('loadingState')) $('loadingState').classList.add('hidden');
+  }
 }
 
 // ─── Filtering Logic ─────────────────────────────────────────
@@ -902,6 +1010,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const savedSbKey = localStorage.getItem('supabase_key');
   if (savedSbKey) state.supabaseKey = savedSbKey;
+
+  const savedCustomNiches = localStorage.getItem('custom_niches');
+  if (savedCustomNiches) {
+    try {
+      state.customNiches = JSON.parse(savedCustomNiches);
+    } catch(e) {}
+  }
 
   renderNichePills();
   loadNicheTemplates(state.activeNiche);
