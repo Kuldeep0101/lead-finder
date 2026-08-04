@@ -3,86 +3,87 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LeadMapper — Google Maps Lead Finder</title>
-  <meta name="description" content="AI-powered lead generation dashboard using Apify Google Maps Scraper. Find, filter, and export business leads in seconds." />
+  <title>LeadMapper — AI Google Maps Lead Finder & CRM</title>
+  <meta name="description" content="AI-powered lead generation & outreach CRM using Apify Google Maps Scraper." />
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
-  <!-- Background Orbs -->
+  <!-- Ambient Background Orbs -->
   <div class="bg-orb orb-1"></div>
   <div class="bg-orb orb-2"></div>
-  <div class="bg-orb orb-3"></div>
 
-  <!-- Access Authorization Screen -->
+  <!-- Authentication Overlay -->
   <div class="auth-overlay hidden" id="authOverlay">
     <div class="auth-card">
       <div class="auth-header">
         <div class="auth-logo-icon">
-          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/>
-            <circle cx="12" cy="10" r="3"/>
+          <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3">
+            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
           </svg>
         </div>
-        <h1 class="auth-title">Lead<span class="accent">Mapper</span> Access</h1>
+        <h1 class="auth-title">Lead<span class="accent">Mapper</span></h1>
         <p class="auth-subtitle">Protected Application — Sign in to continue</p>
       </div>
 
       <form id="authForm" onsubmit="handleAuthSubmit(event)">
         <div id="authError" class="auth-error hidden">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
             <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
           </svg>
           <span id="authErrorMsg">Invalid username or password</span>
         </div>
 
-        <div class="form-section">
-          <div class="section-label">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
-            </svg>
-            Username
-          </div>
+        <div class="form-group">
+          <label class="form-label">Username</label>
           <input type="text" id="authUsername" class="form-input" placeholder="Enter username" required autocomplete="username" />
         </div>
 
-        <div class="form-section">
-          <div class="section-label">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
-            </svg>
-            Password
-          </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
           <div class="input-wrapper">
             <input type="password" id="authPassword" class="form-input" placeholder="Enter password" required autocomplete="current-password" />
-            <button type="button" class="toggle-visibility" id="toggleAuthPassword" title="Show/Hide password">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
+            <button type="button" class="toggle-password-btn" id="toggleAuthPassword">👁️</button>
           </div>
         </div>
 
-        <button type="submit" class="generate-btn auth-submit-btn">
-          <span class="btn-content">
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/>
-            </svg>
-            Unlock Dashboard
-          </span>
+        <button type="submit" class="primary-btn full-btn">
+          <span>Unlock Dashboard</span>
         </button>
       </form>
     </div>
   </div>
 
+  <!-- Header Bar -->
+  <header class="app-header hidden" id="header">
+    <div class="header-container">
+      <div class="brand-logo">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+        <span>Lead<span class="accent">Mapper</span></span>
+      </div>
+      <div class="header-right">
+        <button class="icon-text-btn" onclick="openSettingsModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+          </svg>
+          Settings
+        </button>
+        <button class="icon-text-btn danger-text-btn" onclick="handleLogout()">Sign Out</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Container -->
   <main class="main-layout full-width-layout">
-    <!-- Main Dashboard -->
-    <section class="dashboard full-width-dashboard" id="dashboard">
-      <!-- Top Niche Bar (Active Workspaces on top) -->
+    <div class="dashboard-wrapper">
+      
+      <!-- Top Active Workspaces Bar -->
       <div class="niche-selector-container">
-        <div class="niche-label">Active Workspaces:</div>
+        <div class="niche-label">ACTIVE WORKSPACES:</div>
         <div class="niche-scroll-wrapper" id="nicheBar">
           <button class="niche-pill active" data-niche="coaching" onclick="switchNiche('coaching')">
             <span>🎓</span> Coaching Institutes
@@ -96,293 +97,154 @@
           <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
             <span>➕</span> Add Niche
           </button>
-          <button class="niche-pill import-niche-pill" onclick="openImportModal()" title="Import Dataset ID or JSON to active niche">
-            <span>📥</span> Import Dataset ID / JSON
+          <button class="niche-pill import-niche-pill" onclick="openImportModal()">
+            <span>📥</span> Import Dataset / JSON
           </button>
         </div>
       </div>
 
-      <!-- Navigation Tabs Bar (Below Active Workspaces) -->
+      <!-- Main Navigation Tabs Bar -->
       <div class="dashboard-nav-bar" id="dashboardNavBar">
-        <button class="dash-nav-tab active" id="tabSearch" onclick="showState('empty')" title="Search & Scrape Launcher">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-          </svg>
-          Search Criteria Launcher
+        <button class="dash-nav-tab active" id="tabSearch" onclick="setView('empty')">
+          🔍 Search Launcher
         </button>
-        <button class="dash-nav-tab" id="tabResults" onclick="setView('grid')" title="Scraped Leads Dashboard">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-          </svg>
-          Scraped Leads <span class="nav-count-badge" id="scrapedNavBadge">0</span>
+        <button class="dash-nav-tab" id="tabResults" onclick="setView('grid')">
+          📋 Scraped Leads <span class="nav-count-badge" id="scrapedNavBadge">0</span>
         </button>
-        <button class="dash-nav-tab" id="tabFollowups" onclick="setView('followups')" title="Contacted Leads CRM">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-          </svg>
-          Contacted CRM <span class="nav-count-badge" id="contactedNavBadge">0</span>
+        <button class="dash-nav-tab" id="tabFollowups" onclick="setView('followups')">
+          💬 Contacted CRM <span class="nav-count-badge" id="contactedNavBadge">0</span>
         </button>
-        <button class="dash-nav-tab" id="tabClosedDeals" onclick="setView('closed')" title="Closed Deals">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-          </svg>
-          Closed Deals <span class="nav-count-badge gold-badge" id="closedNavBadge">0</span>
-        </button>
-
-        <!-- Settings Pill Button -->
-        <button class="dash-nav-tab settings-pill-btn" onclick="openSettingsModal()" title="API & Cloud Sync Settings">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/>
-          </svg>
-          Settings
+        <button class="dash-nav-tab" id="tabClosedDeals" onclick="setView('closed')">
+          ⭐ Closed Deals <span class="nav-count-badge gold-badge" id="closedNavBadge">0</span>
         </button>
       </div>
 
-      <!-- Functional Search & Scrape Launcher Workspace -->
-      <div class="search-workspace-wrapper" id="emptyState">
-        <div class="search-workspace-header">
-          <div class="search-workspace-title">
+      <!-- VIEW 1: Search Launcher Workspace -->
+      <section class="view-section" id="emptyState">
+        <div class="search-workspace-card">
+          <div class="workspace-card-header">
             <span id="activeNicheBadge" class="active-niche-tag">🎓 Coaching Workspace</span>
-            Search & Lead Generation Launcher
+            <h2>Google Maps Scraper Criteria</h2>
+            <p>Set location & search terms to extract verified business leads.</p>
           </div>
-          <p class="search-workspace-subtitle">Configure search parameters, filters, and niche-specific templates to scrape Google Maps.</p>
-        </div>
 
-        <div class="search-workspace-grid">
-          <!-- Card A: Target Parameters -->
-          <div class="search-card">
-            <div class="search-card-header">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              Search Criteria
+          <form id="searchForm" onsubmit="handleSearch(event)">
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="form-label">Category / Search Term</label>
+                <input type="text" id="searchQuery" class="form-input" placeholder="e.g. IAS Coaching Institute" required />
+              </div>
+              <div class="form-group">
+                <label class="form-label">City / Target Location</label>
+                <input type="text" id="locationQuery" class="form-input" placeholder="e.g. Delhi, India" required />
+              </div>
             </div>
 
-            <div class="form-section">
-              <div class="section-label">Business Type / Keyword</div>
-              <input type="text" id="searchQuery" class="form-input" placeholder="e.g. NEET coaching, bridal makeup, car denting…" />
-            </div>
+            <!-- Slider & Filters -->
+            <div class="filter-controls-row">
+              <div class="form-group slider-group">
+                <div class="slider-header">
+                  <label class="form-label">Max Leads Limit</label>
+                  <span id="rangeValue" class="slider-val">50</span>
+                </div>
+                <input type="range" id="maxResultsSlider" min="5" max="300" step="5" value="50" class="range-slider" />
+              </div>
 
-            <div class="form-section">
-              <div class="section-label">Target Location</div>
-              <input type="text" id="locationQuery" class="form-input" placeholder="e.g. Patna, Bihar, India" />
-            </div>
-
-            <div class="form-section">
-              <div class="section-label">Max Leads to Scrape</div>
-              <div class="range-container">
-                <input type="range" id="maxResultsSlider" class="range-input" min="5" max="200" value="20" step="5" />
-                <div class="range-labels">
-                  <span>5</span>
-                  <span class="range-value" id="rangeValue">20</span>
-                  <span>200</span>
+              <div class="star-rating-box">
+                <label class="form-label">Min Rating Filter</label>
+                <div class="star-picker" id="starPicker">
+                  <span class="star-btn" data-rating="1">★</span>
+                  <span class="star-btn" data-rating="2">★</span>
+                  <span class="star-btn" data-rating="3">★</span>
+                  <span class="star-btn" data-rating="4">★</span>
+                  <span class="star-btn" data-rating="5">★</span>
                 </div>
               </div>
             </div>
 
-            <div class="form-section" style="margin-bottom: 0;">
-              <div class="section-label">Minimum Star Rating</div>
-              <div class="star-rating" id="starRating">
-                <button class="star-btn active" data-value="0" id="star-0">Any</button>
-                <button class="star-btn" data-value="3" id="star-3">3★+</button>
-                <button class="star-btn" data-value="3.5" id="star-35">3.5★+</button>
-                <button class="star-btn" data-value="4" id="star-4">4★+</button>
-                <button class="star-btn" data-value="4.5" id="star-45">4.5★+</button>
-              </div>
-            </div>
-          </div>
-
-          <!-- Card B: Lead Qualification Rules -->
-          <div class="search-card">
-            <div class="search-card-header">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon>
-              </svg>
-              Qualification & Language
-            </div>
-
-            <div class="form-section">
-              <label class="switch-container">
-                <input type="checkbox" id="hasPhoneOnlyToggle" checked>
-                <span class="switch-slider"></span>
-                <span class="switch-label">Require Phone Number</span>
+            <!-- Toggles Row -->
+            <div class="toggles-row">
+              <label class="toggle-label">
+                <input type="checkbox" id="removeDuplicatesToggle" checked />
+                <span>Remove Duplicates</span>
               </label>
-              <div class="input-hint">Ensures phone or phoneUnformatted is present.</div>
-            </div>
-
-            <div class="form-section">
-              <label class="switch-container">
-                <input type="checkbox" id="minReviewsToggle">
-                <span class="switch-slider"></span>
-                <span class="switch-label">Active Business (15+ Reviews)</span>
+              <label class="toggle-label">
+                <input type="checkbox" id="onlyWithoutWebsiteToggle" />
+                <span>No Website Only</span>
               </label>
-              <div class="input-hint">Social proof filter for active businesses making revenue.</div>
-            </div>
-
-            <div class="form-section">
-              <label class="switch-container">
-                <input type="checkbox" id="onlyWithoutWebsiteToggle">
-                <span class="switch-slider"></span>
-                <span class="switch-label">Missing / Weak Website Only</span>
+              <label class="toggle-label">
+                <input type="checkbox" id="hasPhoneOnlyToggle" />
+                <span>Has Phone Only</span>
               </label>
-              <div class="input-hint">Empty sites & <code>.business.site</code>, <code>.wixsite.com</code>, etc.</div>
-            </div>
-
-            <div class="form-section">
-              <label class="switch-container">
-                <input type="checkbox" id="removeDuplicatesToggle" checked>
-                <span class="switch-slider"></span>
-                <span class="switch-label">Remove Duplicate Phones</span>
+              <label class="toggle-label">
+                <input type="checkbox" id="minReviewsToggle" />
+                <span>15+ Reviews</span>
+              </label>
+              <label class="toggle-label">
+                <input type="checkbox" id="onlyContactedToggle" />
+                <span>Contacted Only</span>
               </label>
             </div>
 
-            <div class="form-section" style="margin-bottom: 0;">
-              <div class="section-label">Maps Language</div>
-              <select id="languageSelect" class="form-input form-select">
-                <option value="en">English</option>
-                <option value="hi">Hindi</option>
-                <option value="es">Spanish</option>
-                <option value="fr">French</option>
-              </select>
-            </div>
-          </div>
-
-          <!-- Card C: Dedicated Niche Message Templates -->
-          <div class="search-card wide-card">
-            <div class="search-card-header">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-              </svg>
-              Dedicated Outreach Templates (<span id="templateNicheName">Coaching</span>)
-            </div>
-
-            <div class="template-grid">
-              <div class="form-section">
-                <div class="section-label">Initial WhatsApp Outreach</div>
-                <textarea id="outreachTemplate" class="form-input form-textarea" rows="4" placeholder="Hi [Name], I noticed your [Reviews] reviews..."></textarea>
-                <div class="input-hint">Variables: <code>[Name]</code>, <code>[Category]</code>, <code>[Reviews]</code>, <code>[Stars]</code></div>
-              </div>
-
-              <div class="form-section">
-                <div class="section-label">Follow-up Message Template</div>
-                <textarea id="outreachFollowupTemplate" class="form-input form-textarea" rows="4" placeholder="Hi [Name], floating this to top of your inbox..."></textarea>
-                <div class="input-hint">Used in Contacted CRM follow-up cadence</div>
-              </div>
-            </div>
-
-            <!-- Primary Generate Button -->
-            <div class="launcher-actions">
-              <button class="generate-btn large-btn" id="generateBtn" onclick="generateLeads()">
-                <span class="btn-content" id="btnContent">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
-                    <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
-                  </svg>
-                  Generate Leads for <span id="generateNicheLabel">Coaching</span>
-                </span>
-                <span class="btn-loader hidden" id="btnLoader">
-                  <span class="spinner"></span>
-                  Scraping Google Maps…
-                </span>
-              </button>
-            </div>
-          </div>
-      </div>
-
-      <!-- Loading State -->
-      <div class="loading-state hidden" id="loadingState">
-        <div class="loading-animation">
-          <div class="pulse-ring"></div>
-          <div class="pulse-ring delay-1"></div>
-          <div class="pulse-ring delay-2"></div>
-          <div class="map-pin-loader">
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-            </svg>
-          </div>
-        </div>
-        <h2 class="loading-title">Scraping Google Maps…</h2>
-        <p class="loading-desc" id="loadingDesc">This may take 1–3 minutes depending on your search.</p>
-        <div class="progress-bar-container">
-          <div class="progress-bar" id="progressBar"></div>
-        </div>
-        <div class="loading-steps" id="loadingSteps">
-          <div class="step active" id="step1">🚀 Starting Apify actor…</div>
-          <div class="step" id="step2">🗺️ Scanning Google Maps…</div>
-          <div class="step" id="step3">📋 Extracting business data…</div>
-          <div class="step" id="step4">✅ Processing results…</div>
-        </div>
-      </div>
-
-      <!-- Results Area -->
-      <div class="results-area hidden" id="resultsArea">
-        <!-- Toolbar -->
-        <div class="results-toolbar">
-          <div class="results-meta">
-            <button class="back-nav-btn" onclick="showState('empty')" title="Back to Search Form">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              Back to Search
+            <button type="submit" class="primary-btn run-scraper-btn" id="generateBtn">
+              <span id="btnContent">🚀 Run Apify Google Maps Scraper</span>
+              <span id="btnLoader" class="hidden">⌛ Scraping Google Maps...</span>
             </button>
+          </form>
+        </div>
+      </section>
+
+      <!-- VIEW 2: Loading State -->
+      <section class="view-section hidden" id="loadingState">
+        <div class="loading-card">
+          <div class="spinner-lg"></div>
+          <h2>Fetching Scraped Leads from Google Maps...</h2>
+          <p id="loadingMsg">Extracting business names, ratings, phone numbers & websites...</p>
+        </div>
+      </section>
+
+      <!-- VIEW 3: Error State -->
+      <section class="view-section hidden" id="errorState">
+        <div class="error-card">
+          <div class="error-icon">⚠️</div>
+          <h2>Scraping Request Failed</h2>
+          <p id="errorMessage">An unexpected error occurred while fetching leads.</p>
+          <button class="secondary-btn" onclick="setView('empty')">← Back to Launcher</button>
+        </div>
+      </section>
+
+      <!-- VIEW 4: Scraped Leads Dashboard -->
+      <section class="view-section hidden" id="resultsArea">
+        <div class="toolbar-wrapper">
+          <div class="toolbar-info">
+            <button class="back-btn" onclick="setView('empty')">← Back</button>
             <div>
-              <h2 class="results-title" id="resultsTitle">Leads Found</h2>
-              <div class="results-subtitle" id="resultsSubtitle"></div>
+              <h2 id="resultsTitle" class="toolbar-title">Scraped Leads</h2>
+              <div id="resultsSubtitle" class="toolbar-subtitle">Showing verified business leads</div>
             </div>
           </div>
+
           <div class="toolbar-actions">
-            <div class="search-filter">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-              </svg>
-              <input type="text" id="filterInput" class="filter-input" placeholder="Filter results…" oninput="filterLeads()" />
+            <div class="search-box">
+              <input type="text" id="filterInput" placeholder="Search leads..." oninput="filterLeads()" />
             </div>
-            <button class="toolbar-chip-btn" id="toolbarNoWebsiteBtn" onclick="toggleNoWebsiteFilter()" title="Show only leads without website">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-                <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-              </svg>
-              No Website Only
-            </button>
-            <button class="toolbar-chip-btn green-chip" id="toolbarContactedBtn" onclick="toggleContactedFilter()" title="Show only contacted leads">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <polyline points="20 6 9 17 4 12"></polyline>
-              </svg>
-              Contacted Only
-            </button>
-            <div class="view-toggle">
-              <button class="view-btn active" id="viewGrid" onclick="setView('grid')" title="Grid View">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                </svg>
-              </button>
-              <button class="view-btn" id="viewTable" onclick="setView('table')" title="Table View">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/>
-                  <line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
-                </svg>
-              </button>
-              <button class="view-btn" id="viewFollowups" onclick="setView('followups')" title="Follow-up CRM">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                  <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-                </svg>
-              </button>
+
+            <button class="chip-btn" id="toolbarNoWebsiteBtn" onclick="toggleNoWebsiteFilter()">No Website Only</button>
+            <button class="chip-btn" id="toolbarContactedBtn" onclick="toggleContactedFilter()">Contacted Only</button>
+
+            <div class="view-toggle-btns">
+              <button class="view-btn active" id="viewGrid" onclick="setView('grid')">Grid</button>
+              <button class="view-btn" id="viewTable" onclick="setView('table')">Table</button>
             </div>
-            <button class="export-btn" id="exportBtn" onclick="exportCSV()">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-                <polyline points="7 10 12 15 17 10"/>
-                <line x1="12" y1="15" x2="12" y2="3"/>
-              </svg>
-              Export CSV
-            </button>
+
+            <button class="primary-btn export-btn" id="exportBtn" onclick="exportCSV()">Export CSV</button>
           </div>
         </div>
 
-        <!-- Grid View -->
+        <!-- Grid Cards Container -->
         <div class="leads-grid" id="leadsGrid"></div>
 
-        <!-- Table View -->
+        <!-- Table View Container -->
         <div class="table-wrapper hidden" id="tableWrapper">
           <table class="leads-table">
             <thead>
@@ -400,200 +262,65 @@
             <tbody id="leadsTableBody"></tbody>
           </table>
         </div>
-      </div>
+      </section>
 
-      <!-- Error State -->
-      <div class="error-state hidden" id="errorState">
-        <div class="error-icon">
-          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
-          </svg>
-        </div>
-        <h2 class="error-title">Something went wrong</h2>
-        <p class="error-message" id="errorMessage">An unexpected error occurred. Please check your API key and try again.</p>
-        <button class="retry-btn" onclick="resetToEmpty()">← Back to Search</button>
-      </div>
-
-      <!-- Follow-ups Area -->
-      <div class="followups-area hidden" id="followupsArea">
-        <div class="results-toolbar">
-          <div class="results-meta">
-            <button class="back-nav-btn" onclick="goBackToPreviousView()" title="Go Back">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              Back
-            </button>
-            <div>
-              <h2 class="results-title">Contacted Leads CRM (<span id="crmNicheTitle">Coaching</span>)</h2>
-              <div class="results-subtitle" id="followupsSubtitle">Loading follow-ups...</div>
-            </div>
+      <!-- VIEW 5: Contacted CRM -->
+      <section class="view-section hidden" id="followupsArea">
+        <div class="toolbar-wrapper">
+          <div>
+            <h2 class="toolbar-title">Contacted CRM (<span id="crmNicheTitle">Coaching</span>)</h2>
+            <div class="toolbar-subtitle" id="followupsSubtitle">Loading outreach history...</div>
           </div>
         </div>
-        <div class="followups-grid" id="followupsGrid">
-          <!-- Dynamically populated via JS -->
-        </div>
-      </div>
 
-      <!-- Closed Deals Area -->
-      <div class="closed-deals-area hidden" id="closedDealsArea">
-        <div class="results-toolbar">
-          <div class="results-meta">
-            <button class="back-nav-btn" onclick="goBackToPreviousView()" title="Go Back">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-                <line x1="19" y1="12" x2="5" y2="12"></line>
-                <polyline points="12 19 5 12 12 5"></polyline>
-              </svg>
-              Back
-            </button>
-            <div>
-              <h2 class="results-title">🏆 Closed Deals (<span id="closedNicheTitle">Coaching</span>)</h2>
-              <div class="results-subtitle" id="closedDealsSubtitle">Successfully converted client deals!</div>
-            </div>
+        <div class="followups-grid" id="followupsGrid"></div>
+      </section>
+
+      <!-- VIEW 6: Closed Deals -->
+      <section class="view-section hidden" id="closedDealsArea">
+        <div class="toolbar-wrapper">
+          <div>
+            <h2 class="toolbar-title">Won Client Deals</h2>
+            <div class="toolbar-subtitle" id="closedDealsSubtitle">Loading closed deals...</div>
           </div>
         </div>
-        <div class="followups-grid" id="closedDealsGrid">
-          <!-- Dynamically populated via JS -->
-        </div>
-      </div>
 
-    </section>
+        <div class="closed-deals-grid" id="closedDealsGrid"></div>
+      </section>
+
+    </div>
   </main>
 
-  <!-- Outreach Message Modal -->
-  <div class="modal-overlay hidden" id="outreachModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">Review WhatsApp Message</h3>
-        <button class="modal-close" onclick="closeOutreachModal()" title="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-section">
-          <div class="section-label">Phone Number</div>
-          <input type="text" id="modalPhone" class="form-input" placeholder="+919876543210" />
-          <div class="input-hint">Ensure the country code (+XXX) is correct for WhatsApp to launch successfully.</div>
-        </div>
-        <div class="form-section" style="margin-bottom: 0;">
-          <div class="section-label">Message Details</div>
-          <textarea id="modalMessage" class="form-input form-textarea" style="min-height: 180px;" rows="8"></textarea>
-          <div class="input-hint">You can edit this message specifically for this lead before sending.</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-btn cancel-btn" onclick="closeOutreachModal()">Cancel</button>
-        <button class="modal-btn send-btn" onclick="confirmSendMessage()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
-          </svg>
-          Send to WhatsApp
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Import Apify Dataset Modal -->
-  <div class="modal-overlay hidden" id="importModal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 class="modal-title">Import Apify Dataset</h3>
-        <button class="modal-close" onclick="closeImportModal()" title="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <div class="form-section">
-          <div class="section-label">Apify Dataset ID or URL</div>
-          <input type="text" id="importDatasetId" class="form-input" placeholder="e.g. SDRJJ2mlXdEiBg0Rn" />
-          <div class="input-hint">Paste Dataset ID from Apify Console to load scraped data without re-scraping!</div>
-        </div>
-        <div class="divider" style="margin: 16px 0;"></div>
-        <div class="form-section" style="margin-bottom: 0;">
-          <div class="section-label">Or Upload Exported JSON File</div>
-          <input type="file" id="importJsonFile" class="form-input" accept=".json" onchange="handleJsonFileUpload(event)" />
-          <div class="input-hint">Upload a .json dataset file downloaded from Apify.</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-btn cancel-btn" onclick="closeImportModal()">Cancel</button>
-        <button class="modal-btn send-btn" id="confirmImportBtn" onclick="confirmImportDataset()">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
-            <polyline points="17 8 12 3 7 8"/>
-            <line x1="12" y1="3" x2="12" y2="15"/>
-          </svg>
-          Import Dataset
-        </button>
-      </div>
-    </div>
-  </div>
-
-  <!-- Settings Modal (API & Cloud Sync) -->
+  <!-- Settings Modal -->
   <div class="modal-overlay hidden" id="settingsModal">
-    <div class="modal-content">
+    <div class="modal-card">
       <div class="modal-header">
-        <h3 class="modal-title">⚙️ API & Cloud Sync Settings</h3>
-        <button class="modal-close" onclick="closeSettingsModal()" title="Close">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
+        <h3>API & Cloud Sync Credentials</h3>
+        <button class="close-btn" onclick="closeSettingsModal()">✕</button>
       </div>
       <div class="modal-body">
-        <div class="form-section">
-          <div class="section-label">Apify API Key</div>
+        <div class="form-group">
+          <label class="form-label">Apify API Key</label>
+          <input type="password" id="apifyApiKey" class="form-input" placeholder="apify_api_..." />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Supabase URL</label>
+          <input type="text" id="supabaseUrl" class="form-input" placeholder="https://xyz.supabase.co" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Supabase Anon Key</label>
           <div class="input-wrapper">
-            <input type="password" id="apifyApiKey" class="form-input" placeholder="apify_api_XXXXXXXXXXXXXXXX" autocomplete="off" />
-            <button class="toggle-visibility" id="toggleApiKey" title="Show/Hide API key">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
-          <div class="input-hint">
-            <a href="https://console.apify.com/account/integrations" target="_blank" rel="noopener">Get Apify Key →</a>
+            <input type="password" id="supabaseKey" class="form-input" placeholder="eyJ..." />
+            <button type="button" class="toggle-password-btn" id="toggleDbKey">👁️</button>
           </div>
         </div>
-
-        <div class="divider" style="margin: 16px 0;"></div>
-
-        <div class="form-section">
-          <div class="section-label">Supabase Cloud DB URL</div>
-          <input type="text" id="supabaseUrl" class="form-input" value="https://wgfteclxeqsrormimttj.supabase.co" placeholder="https://xyz.supabase.co" autocomplete="off" />
-        </div>
-
-        <div class="form-section" style="margin-bottom: 0;">
-          <div class="section-label">Supabase Anon Key</div>
-          <div class="input-wrapper">
-            <input type="password" id="supabaseKey" class="form-input" value="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZnRlY2x4ZXFzcm9ybWltdHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NDczNDUsImV4cCI6MjEwMTMyMzM0NX0.9mozUxN2cPCsrHsU4jtOWOIPGukLJmyWokg7I_wG13Y" placeholder="anon-public-key..." autocomplete="off" />
-            <button class="toggle-visibility" id="toggleDbKey" title="Show/Hide DB key">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="eye-icon">
-                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-          </div>
-          <div class="input-hint">Syncs scraped leads and CRM follow-ups cross-device!</div>
-        </div>
-      </div>
-      <div class="modal-footer">
-        <button class="modal-btn send-btn" style="width:100%; justify-content:center;" onclick="closeSettingsModal()">Save & Apply Settings</button>
+        <button class="primary-btn full-btn" onclick="saveSettings()">Save Credentials</button>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification -->
-  <div class="toast hidden" id="toast">
-    <span id="toastMessage">Copied!</span>
-  </div>
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="toast-container"></div>
 
   <script src="app.js"></script>
 </body>

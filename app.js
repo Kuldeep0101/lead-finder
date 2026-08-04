@@ -1,76 +1,94 @@
-/* ============================================================
-   LeadMapper — Main Application Logic
-   Uses Apify Google Maps Scraper (compass/crawler-google-places)
-   ============================================================ */
+// ============================================
+// LeadMapper — Core Application Logic
+// ============================================
 
-// ─── Global Error & Debug Logger ──────────────────────────────
-window.addEventListener('error', (event) => {
-  const errorMsg = `🚨 App Error: ${event.message} (${event.filename?.split('/').pop()}:${event.lineno})`;
-  console.error(errorMsg, event.error);
-  if (typeof showToast === 'function') {
-    showToast(errorMsg, 'error');
+const DEFAULT_SUPABASE_URL = 'https://wgfteclxeqsrormimttj.supabase.co';
+const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZnRlY2x4ZXFzcm9ybWltdHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NDczNDUsImV4cCI6MjEwMTMyMzM0NX0.9mozUxN2cPCsrHsU4jtOWOIPGukLJmyWokg7I_wG13Y';
+const ACTOR_ID = 'compass~crawler-google-places';
+
+const DEFAULT_NICHES = {
+  coaching: {
+    id: 'coaching',
+    name: 'Coaching Institutes',
+    icon: '🎓',
+    defaultQuery: 'IAS Coaching Institute',
+    defaultLocation: 'Delhi, India',
+    template: 'Hi [Name], I noticed your coaching institute in [Location]. We help top institutes acquire 20+ new student enrollments monthly. Are you taking on new batches this month?',
+    followup: 'Hi [Name], following up on my previous note. Would love to share how we helped similar institutes scale student intake.'
+  },
+  makeup: {
+    id: 'makeup',
+    name: 'Bridal & Spa',
+    icon: '💄',
+    defaultQuery: 'Bridal Makeup Artist',
+    defaultLocation: 'Mumbai, India',
+    template: 'Hi [Name], loved your portfolio! We help premium bridal makeup artists book 15+ high-ticket bridal bookings every month. Do you have availability for upcoming wedding dates?',
+    followup: 'Hi [Name], floating this to top of your inbox. We have 3 qualified bridal leads looking for artists in [Location] this month.'
+  },
+  cardenting: {
+    id: 'cardenting',
+    name: 'Car Decoration & Denting',
+    icon: '🚗',
+    defaultQuery: 'Car Denting Painting Workshop',
+    defaultLocation: 'Bangalore, India',
+    template: 'Hi [Name], saw your workshop listing. We send 25+ car repair & detailing customers directly to auto garages in [Location]. Open to taking more car repair jobs?',
+    followup: 'Hi [Name], checking in quickly. Would you be open to a 2-min chat on getting more daily car detailing & denting jobs?'
   }
-});
-
-window.addEventListener('unhandledrejection', (event) => {
-  const errorMsg = `🚨 Async Error: ${event.reason?.message || event.reason}`;
-  console.error(errorMsg, event.reason);
-  if (typeof showToast === 'function') {
-    showToast(errorMsg, 'error');
-  }
-});
-
-const NICHES = {
-  coaching: { id: 'coaching', name: 'Coaching Institutes', icon: '🎓', defaultQuery: 'NEET IIT JEE SSC Coaching centers', defaultLocation: 'Patna, Bihar, India', template: 'Hi [Name], I noticed your coaching institute in [Location] has [Reviews] reviews. Would you like a high-converting website to double student admissions?', followup: 'Hi [Name], just floating this to the top of your inbox. Let me know if you are open for a quick 2-min demo!' },
-  makeup: { id: 'makeup', name: 'Bridal & Spa', icon: '💄', defaultQuery: 'Bridal makeup artists beauty parlour spa', defaultLocation: 'Mumbai, Maharashtra, India', template: 'Hi [Name], love your bridal portfolio! Noticed you don’t have a online booking website yet. Would you be interested in a customized site to get 30+ new bridal bookings/month?', followup: 'Hi [Name], following up on my previous message. Would love to share a free website mockup for your salon/beauty parlour!' },
-  cardenting: { id: 'cardenting', name: 'Car Decoration & Denting', icon: '🚗', defaultQuery: 'Car denting painting car decoration accessories', defaultLocation: 'Delhi, India', template: 'Hi [Name], I noticed your car denting & decoration shop on Google Maps. We build premium portfolios for auto shops to drive instant calls. Can I share a quick sample?', followup: 'Hi [Name], just following up to check if you have 2 mins to view our car workshop portfolio website demo?' }
 };
 
 const state = {
+  activeNiche: 'coaching',
+  customNiches: [],
   leads: [],
   filteredLeads: [],
-  currentView: 'grid',
+  followups: [],
+  closedDeals: [],
+  contactedPhones: new Set(),
+  currentView: 'empty', // 'empty', 'grid', 'table', 'followups', 'closed'
   minRating: 0,
   hasPhoneOnly: false,
   minReviews15: false,
   onlyWithoutWebsite: false,
   onlyContacted: false,
-  isLoading: false,
-  outreachTemplate: '',
-  outreachFollowupTemplate: '',
   removeDuplicates: true,
-  contactedPhones: new Set(),
-  currentOutreachLead: null,
-  supabaseUrl: '',
-  supabaseKey: '',
-  followups: [],
-  closedDeals: [],
-  activeNiche: localStorage.getItem('active_niche') || 'coaching',
-  customNiches: JSON.parse(localStorage.getItem('custom_niches') || '[]'),
+  supabaseUrl: DEFAULT_SUPABASE_URL,
+  supabaseKey: DEFAULT_SUPABASE_KEY,
+  apifyApiKey: ''
 };
 
-const ACTOR_ID = 'compass~crawler-google-places';
-const POLL_INTERVAL_MS = 4000;
-const MAX_POLL_RETRIES = 90; // ~6 minutes
-
-// ─── DOM References ──────────────────────────────────────────
 const $ = (id) => document.getElementById(id);
 
-// ─── Authentication Logic ────────────────────────────────────
+// ─── Toast Notifications ─────────────────────────────────────
+function showToast(msg, type = 'info') {
+  const container = $('toastContainer');
+  if (!container) return;
+  const toast = document.createElement('div');
+  toast.className = `toast ${type}`;
+  toast.textContent = msg;
+  container.appendChild(toast);
+  setTimeout(() => toast.remove(), 3500);
+}
+
+// ─── Niche Configuration Helper ──────────────────────────────
+function getNicheConfig(nicheKey) {
+  if (DEFAULT_NICHES[nicheKey]) return DEFAULT_NICHES[nicheKey];
+  const custom = state.customNiches.find(c => c.id === nicheKey);
+  if (custom) return custom;
+  return DEFAULT_NICHES.coaching;
+}
+
+// ─── Auth Logic ──────────────────────────────────────────────
 function checkAuth() {
   const isAuth = localStorage.getItem('leadmapper_authenticated') === 'true';
-  const authOverlay = $('authOverlay');
+  const overlay = $('authOverlay');
   const header = $('header');
-  const mainLayout = document.querySelector('.main-layout');
 
   if (isAuth) {
-    if (authOverlay) authOverlay.classList.add('hidden');
+    if (overlay) overlay.classList.add('hidden');
     if (header) header.classList.remove('hidden');
-    if (mainLayout) mainLayout.classList.remove('hidden');
   } else {
-    if (authOverlay) authOverlay.classList.remove('hidden');
+    if (overlay) overlay.classList.remove('hidden');
     if (header) header.classList.add('hidden');
-    if (mainLayout) mainLayout.classList.add('hidden');
   }
 }
 
@@ -78,800 +96,59 @@ function handleAuthSubmit(e) {
   e.preventDefault();
   const user = $('authUsername').value.trim();
   const pass = $('authPassword').value.trim();
-  const errBox = $('authError');
 
   if (user === 'kennyS007' && pass === 'Ayushman@123') {
-    if (errBox) errBox.classList.add('hidden');
     localStorage.setItem('leadmapper_authenticated', 'true');
     checkAuth();
-    showToast('🔓 Access Granted! Welcome, kennyS007');
+    showToast('🔓 Welcome, kennyS007!');
   } else {
-    if (errBox) {
-      errBox.classList.remove('hidden');
-      $('authErrorMsg').textContent = 'Invalid username or password. Please try again.';
-    }
+    $('authError').classList.remove('hidden');
+    $('authErrorMsg').textContent = 'Invalid credentials. Please try again.';
   }
 }
 
 function handleLogout() {
   localStorage.removeItem('leadmapper_authenticated');
   checkAuth();
-  showToast('🔒 Signed out successfully');
+  showToast('🔒 Signed out');
 }
 
-// ─── Init ────────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  checkAuth();
-
-  $('toggleAuthPassword')?.addEventListener('click', () => {
-    const input = $('authPassword');
-    if (input) input.type = input.type === 'password' ? 'text' : 'password';
-  });
-
-  initRangeSlider();
-  initStarRating();
-  initApiKeyToggle();
-  initSidebarToggle();
-
-  // Restore saved API key
-  const saved = localStorage.getItem('apify_api_key');
-  if (saved && $('apifyApiKey')) $('apifyApiKey').value = saved;
-
-  $('apifyApiKey')?.addEventListener('input', (e) => {
-    localStorage.setItem('apify_api_key', e.target.value.trim());
-  });
-
-  // Restore sidebar state
-  if (localStorage.getItem('sidebar_collapsed') === 'true') {
-    document.body.classList.add('sidebar-collapsed');
-  }
-
-  // Restore Template and Deduplication state
-  const savedTemplate = localStorage.getItem('outreach_template');
-  if (savedTemplate && $('outreachTemplate')) {
-    $('outreachTemplate').value = savedTemplate;
-    state.outreachTemplate = savedTemplate;
-  }
-  const savedFollowupTemplate = localStorage.getItem('outreach_followup_template');
-  if (savedFollowupTemplate && $('outreachFollowupTemplate')) {
-    $('outreachFollowupTemplate').value = savedFollowupTemplate;
-    state.outreachFollowupTemplate = savedFollowupTemplate;
-  }
-  
-  const savedDedup = localStorage.getItem('remove_duplicates');
-  if (savedDedup !== null) {
-    const isDedup = savedDedup === 'true';
-    if ($('removeDuplicatesToggle')) $('removeDuplicatesToggle').checked = isDedup;
-    state.removeDuplicates = isDedup;
-  }
-
-  const savedNoWebsite = localStorage.getItem('only_without_website');
-  if (savedNoWebsite !== null) {
-    const isNoWebsite = savedNoWebsite === 'true';
-    if ($('onlyWithoutWebsiteToggle')) $('onlyWithoutWebsiteToggle').checked = isNoWebsite;
-    state.onlyWithoutWebsite = isNoWebsite;
-  }
-  
-  loadNicheTemplates(state.activeNiche);
-
-  $('outreachTemplate')?.addEventListener('input', (e) => {
-    state.outreachTemplate = e.target.value;
-    localStorage.setItem(`outreach_template_${state.activeNiche}`, state.outreachTemplate);
-  });
-
-  $('outreachFollowupTemplate')?.addEventListener('input', (e) => {
-    state.outreachFollowupTemplate = e.target.value;
-    localStorage.setItem(`outreach_followup_template_${state.activeNiche}`, state.outreachFollowupTemplate);
-  });
-
-  // Render initial niche pills
-  renderNichePills();
-
-  const savedOnlyContacted = localStorage.getItem('only_contacted');
-  if (savedOnlyContacted !== null) {
-    const isContacted = savedOnlyContacted === 'true';
-    if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = isContacted;
-    state.onlyContacted = isContacted;
-  }
-  
-  // Setup outreach listeners
-  $('removeDuplicatesToggle')?.addEventListener('change', (e) => {
-    state.removeDuplicates = e.target.checked;
-    localStorage.setItem('remove_duplicates', state.removeDuplicates);
-    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
-  });
-
-  $('onlyWithoutWebsiteToggle')?.addEventListener('change', (e) => {
-    state.onlyWithoutWebsite = e.target.checked;
-    localStorage.setItem('only_without_website', state.onlyWithoutWebsite);
-    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
-  });
-
-  $('hasPhoneOnlyToggle')?.addEventListener('change', (e) => {
-    state.hasPhoneOnly = e.target.checked;
-    localStorage.setItem('has_phone_only', state.hasPhoneOnly);
-    if(state.leads.length > 0) filterLeads();
-  });
-
-  $('minReviewsToggle')?.addEventListener('change', (e) => {
-    state.minReviews15 = e.target.checked;
-    localStorage.setItem('min_reviews_15', state.minReviews15);
-    if(state.leads.length > 0) filterLeads();
-  });
-
-  $('onlyContactedToggle')?.addEventListener('change', (e) => {
-    state.onlyContacted = e.target.checked;
-    localStorage.setItem('only_contacted', state.onlyContacted);
-    if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
-  });
-
-  // Restore Contacted history
-  const savedContacted = localStorage.getItem('contacted_phones');
-  if (savedContacted) {
-    try {
-      state.contactedPhones = new Set(JSON.parse(savedContacted));
-    } catch(e) {}
-  }
-
-  // Supabase Restores & Default Credentials
-  const DEFAULT_SUPABASE_URL = 'https://wgfteclxeqsrormimttj.supabase.co';
-  const DEFAULT_SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndnZnRlY2x4ZXFzcm9ybWltdHRqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3NDczNDUsImV4cCI6MjEwMTMyMzM0NX0.9mozUxN2cPCsrHsU4jtOWOIPGukLJmyWokg7I_wG13Y';
-
-  const savedSbUrl = localStorage.getItem('supabase_url') || DEFAULT_SUPABASE_URL;
-  const savedSbKey = localStorage.getItem('supabase_key') || DEFAULT_SUPABASE_KEY;
-
-  if (savedSbUrl) {
-    if ($('supabaseUrl')) $('supabaseUrl').value = savedSbUrl;
-    state.supabaseUrl = savedSbUrl;
-    localStorage.setItem('supabase_url', savedSbUrl);
-  }
-  if (savedSbKey) {
-    if ($('supabaseKey')) $('supabaseKey').value = savedSbKey;
-    state.supabaseKey = savedSbKey;
-    localStorage.setItem('supabase_key', savedSbKey);
-  }
-
-  $('supabaseUrl')?.addEventListener('input', (e) => {
-    state.supabaseUrl = e.target.value.trim();
-    localStorage.setItem('supabase_url', state.supabaseUrl);
-    fetchContactedFromDB(); // Attempt sync when updated
-    fetchSearchHistoryFromDB();
-  });
-  $('supabaseKey')?.addEventListener('input', (e) => {
-    state.supabaseKey = e.target.value.trim();
-    localStorage.setItem('supabase_key', state.supabaseKey);
-    fetchContactedFromDB(); // Attempt sync when updated
-    fetchSearchHistoryFromDB();
-  });
-  
-  // Toggle DB key visibility
-  $('toggleDbKey')?.addEventListener('click', () => {
-    const input = $('supabaseKey');
-    if (input) input.type = input.type === 'password' ? 'text' : 'password';
-  });
-
-  // Initial sync attempt
-  if (state.supabaseUrl && state.supabaseKey) {
-    fetchContactedFromDB();
-    fetchFollowUpsFromDB();
-    fetchSearchHistoryFromDB();
-  }
-
-  // Restore active session if refreshed, or fetch from Supabase
-  const restored = restoreActiveSession();
-  if (restored) {
-    showToast(`⚡ Restored ${state.filteredLeads.length} leads from session!`);
-  } else if (state.supabaseUrl && state.supabaseKey) {
-    fetchScrapedLeadsFromDB().then(() => {
-      filterLeads();
-      renderGridView();
-      renderTableView();
-      showState('results');
-    });
-  }
-});
-
-// ─── Range Slider ────────────────────────────────────────────
-function initRangeSlider() {
-  const slider = $('maxResultsSlider');
-  const valueLabel = $('rangeValue');
-
-  const updateSlider = () => {
-    const min = parseInt(slider.min);
-    const max = parseInt(slider.max);
-    const val = parseInt(slider.value);
-    const pct = ((val - min) / (max - min)) * 100;
-    slider.style.setProperty('--range-pct', `${pct}%`);
-    valueLabel.textContent = val;
-  };
-
-  slider.addEventListener('input', updateSlider);
-  updateSlider();
-}
-
-// ─── Star Rating Buttons ─────────────────────────────────────
-function initStarRating() {
-  const btns = document.querySelectorAll('.star-btn');
-  btns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      btns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      state.minRating = parseFloat(btn.dataset.value);
-      if (state.leads.length > 0) filterLeads();
-    });
-  });
-}
-
-// ─── API Key Toggle ───────────────────────────────────────────
-function initApiKeyToggle() {
-  const btn = $('toggleApiKey');
-  const input = $('apifyApiKey');
-  btn.addEventListener('click', () => {
-    const isPassword = input.type === 'password';
-    input.type = isPassword ? 'text' : 'password';
-    btn.innerHTML = isPassword
-      ? `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/>
-          <line x1="1" y1="1" x2="23" y2="23"/>
-        </svg>`
-      : `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/>
-        </svg>`;
-  });
-}
-
-// ─── Sidebar Toggle ───────────────────────────────────────────
-function initSidebarToggle() {
-  const btn = $('sidebarToggle');
-  if (!btn) return;
-  btn.addEventListener('click', () => {
-    document.body.classList.toggle('sidebar-collapsed');
-    const isCollapsed = document.body.classList.contains('sidebar-collapsed');
-    localStorage.setItem('sidebar_collapsed', isCollapsed);
-  });
-
-  // On mobile devices (<= 768px), default sidebar to collapsed so content is immediately visible
-  if (window.innerWidth <= 768 && localStorage.getItem('sidebar_collapsed') === null) {
-    document.body.classList.add('sidebar-collapsed');
-  }
-}
-
-function collapseSidebarOnMobile() {
-  if (window.innerWidth <= 768) {
-    document.body.classList.add('sidebar-collapsed');
-  }
-}
-
-// ─── Main: Generate Leads ────────────────────────────────────
-async function generateLeads() {
-  const apiKey = $('apifyApiKey').value.trim();
-  const searchQuery = $('searchQuery').value.trim();
-  const locationQuery = $('locationQuery').value.trim();
-  const maxResults = parseInt($('maxResultsSlider').value);
-  const language = $('languageSelect').value;
-
-  // Validation
-  if (!apiKey) return showToast('⚠️ Please enter your Apify API key', 'warning');
-  if (!searchQuery) return showToast('⚠️ Please enter a search query', 'warning');
-  if (!locationQuery) return showToast('⚠️ Please enter a location', 'warning');
-
-  // Save key locally
-  localStorage.setItem('apify_api_key', apiKey);
-
-  // Update UI to loading
-  state.isLoading = true;
-  showState('loading');
-  setBtnLoading(true);
-
-  const searchString = `${searchQuery} in ${locationQuery}`;
-
-  try {
-    // Step 1: Start the Apify actor run
-    activateStep(1);
-    setProgress(10);
-
-    const runId = await startApifyRun(apiKey, {
-      searchStringsArray: [searchString],
-      locationQuery: locationQuery,
-      maxCrawledPlacesPerSearch: maxResults,
-      language: language,
-      includeWebResults: false,
-      onlyWithoutWebsite: state.onlyWithoutWebsite,
-    });
-
-    // Step 2: Poll for completion
-    activateStep(2);
-    setProgress(25);
-
-    const datasetId = await pollForCompletion(apiKey, runId);
-
-    // Step 3: Fetch results
-    activateStep(3);
-    setProgress(75);
-
-    const rawLeads = await fetchDataset(apiKey, datasetId);
-
-    // Step 4: Process
-    activateStep(4);
-    setProgress(90);
-
-    await sleep(600);
-
-    const processed = processLeads(rawLeads);
-
-    state.leads = processed;
-    filterLeads();
-
-    setProgress(100);
-    await sleep(400);
-
-    // Save session to localStorage so accidental refresh never loses it!
-    saveActiveSession(searchQuery, locationQuery, processed);
-
-    // Show results
-    renderGridView();
-    renderTableView();
-    updateResultsMeta(searchQuery, locationQuery, state.filteredLeads.length);
-    $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
-
-    showState('results');
-    collapseSidebarOnMobile();
-    setBtnLoading(false);
-    state.isLoading = false;
-
-    showToast(`✅ Found ${state.filteredLeads.length} leads!`);
-
-    // Save to search history if Supabase is connected
-    if (state.supabaseUrl && state.supabaseKey) {
-      saveSearchToDB(searchQuery, locationQuery, processed);
-    }
-
-  } catch (err) {
-    console.error(err);
-    setBtnLoading(false);
-    state.isLoading = false;
-    showError(err.message || 'An unexpected error occurred. Please check your API key and try again.');
-  }
-}
-
-// ─── Import & Session Persistence ──────────────────────────────
-function openImportModal() {
-  $('importModal').classList.remove('hidden');
-}
-
-function closeImportModal() {
-  $('importModal').classList.add('hidden');
-}
-
-async function confirmImportDataset() {
-  const inputVal = $('importDatasetId').value.trim();
-  const apiKey = $('apifyApiKey').value.trim();
-
-  if (!inputVal) {
-    return showToast('⚠️ Please enter a Dataset ID or URL', 'warning');
-  }
-  if (!apiKey) {
-    return showToast('⚠️ Please enter your Apify API key in the sidebar', 'warning');
-  }
-
-  let datasetId = inputVal;
-  const match = inputVal.match(/datasets\/([a-zA-Z0-9_-]+)/);
-  if (match && match[1]) {
-    datasetId = match[1];
-  }
-
-  try {
-    showToast('⏳ Fetching dataset from Apify...');
-    const rawLeads = await fetchDataset(apiKey, datasetId);
-    
-    if (!rawLeads || rawLeads.length === 0) {
-      return showToast('⚠️ No items found in this dataset', 'warning');
-    }
-
-    const processed = processLeads(rawLeads);
-    state.leads = processed;
-    
-    saveActiveSession('Imported Dataset', datasetId, processed);
-
-    if (state.supabaseUrl && state.supabaseKey) {
-      saveSearchToDB(`Imported (${datasetId})`, 'Apify Dataset', processed);
-    }
-
-    filterLeads();
-    closeImportModal();
-    updateResultsMeta('Imported Dataset', datasetId, state.filteredLeads.length);
-    showState('results');
-    collapseSidebarOnMobile();
-    showToast(`✅ Successfully imported ${processed.length} leads!`);
-  } catch (err) {
-    console.error(err);
-    showToast(`❌ Failed to import: ${err.message || 'Check Dataset ID and API key'}`, 'error');
-  }
-}
-
-function handleJsonFileUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  const reader = new FileReader();
-  reader.onload = (e) => {
-    try {
-      const raw = JSON.parse(e.target.result);
-      const rawLeads = Array.isArray(raw) ? raw : [raw];
-      
-      const processed = processLeads(rawLeads);
-      state.leads = processed;
-      
-      saveActiveSession('JSON File', file.name, processed);
-
-      // Save to Supabase DB if connected
-      if (state.supabaseUrl && state.supabaseKey) {
-        saveSearchToDB(`JSON Upload (${file.name})`, 'Uploaded File', processed);
-      }
-
-      filterLeads();
-      closeImportModal();
-      updateResultsMeta('Imported File', file.name, state.filteredLeads.length);
-      showState('results');
-      showToast(`✅ Loaded & saved ${processed.length} leads from JSON file!`);
-    } catch (err) {
-      showToast('❌ Invalid JSON file format', 'error');
-    }
-  };
-  reader.readAsText(file);
-}
-
-function saveActiveSession(query, location, leads) {
-  try {
-    const sessionData = {
-      query: query || 'Scraped Leads',
-      location: location || '',
-      leads: leads,
-      timestamp: Date.now(),
-      niche: state.activeNiche
-    };
-    localStorage.setItem(`leadmapper_active_session_${state.activeNiche}`, JSON.stringify(sessionData));
-  } catch (e) {
-    console.warn('Could not cache session to localStorage', e);
-  }
-}
-
-function restoreActiveSession() {
-  const saved = localStorage.getItem(`leadmapper_active_session_${state.activeNiche}`);
-  if (!saved) {
-    state.leads = [];
-    state.filteredLeads = [];
-    if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
-    return false;
-  }
-
-  try {
-    const session = JSON.parse(saved);
-    if (session && session.leads && Array.isArray(session.leads) && session.leads.length > 0) {
-      state.leads = session.leads;
-      if (session.query && $('searchQuery')) $('searchQuery').value = session.query;
-      if (session.location && $('locationQuery')) $('locationQuery').value = session.location;
-      filterLeads();
-      renderGridView();
-      renderTableView();
-      updateResultsMeta(session.query || 'Saved Search', session.location || '', state.filteredLeads.length);
-      showState('results');
-      return true;
-    }
-  } catch (e) {
-    console.warn('Failed to restore active session', e);
-  }
-  state.leads = [];
-  state.filteredLeads = [];
-  if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
-  return false;
-}
-async function startApifyRun(apiKey, input) {
-  const url = `https://api.apify.com/v2/acts/${ACTOR_ID}/runs?token=${apiKey}`;
-
-  const resp = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(input),
-  });
-
-  if (!resp.ok) {
-    const errBody = await resp.json().catch(() => ({}));
-    if (resp.status === 401) throw new Error('Invalid Apify API key. Please check and try again.');
-    if (resp.status === 402) throw new Error('Apify account has insufficient credits. Please top up.');
-    throw new Error(errBody?.error?.message || `Apify API error (${resp.status})`);
-  }
-
-  const data = await resp.json();
-  return data.data.id;
-}
-
-async function pollForCompletion(apiKey, runId) {
-  const url = `https://api.apify.com/v2/actor-runs/${runId}?token=${apiKey}`;
-  let retries = 0;
-
-  while (retries < MAX_POLL_RETRIES) {
-    await sleep(POLL_INTERVAL_MS);
-    retries++;
-
-    const resp = await fetch(url);
-    if (!resp.ok) throw new Error(`Failed to poll run status (${resp.status})`);
-
-    const data = await resp.json();
-    const status = data.data.status;
-
-    // Update progress during polling
-    const prog = 25 + Math.min(50, retries * 1.5);
-    setProgress(prog);
-
-    if (status === 'SUCCEEDED') {
-      return data.data.defaultDatasetId;
-    }
-    if (status === 'FAILED' || status === 'ABORTED' || status === 'TIMED-OUT') {
-      throw new Error(`Apify run ${status.toLowerCase()}. Please try again with a smaller result count.`);
-    }
-    // RUNNING or READY – keep polling
-  }
-
-  throw new Error('Timed out waiting for Apify to finish. Try requesting fewer results.');
-}
-
-async function fetchDataset(apiKey, datasetId) {
-  const url = `https://api.apify.com/v2/datasets/${datasetId}/items?token=${apiKey}&format=json&clean=true`;
-  const resp = await fetch(url);
-
-  if (!resp.ok) throw new Error(`Failed to fetch dataset (${resp.status})`);
-
-  const data = await resp.json();
-  return Array.isArray(data) ? data : [];
-}
-
-// ─── Data Processing ─────────────────────────────────────────
-function processLeads(raw) {
-  return raw.map((item, idx) => ({
-    num: idx + 1,
-    name: item.title || item.displayName?.text || 'Unknown Business',
-    category: item.categoryName || item.primaryTypeDisplayName?.text || item.types?.[0] || '—',
-    rating: item.totalScore ?? item.rating ?? null,
-    reviewsCount: item.reviewsCount ?? item.userRatingCount ?? 0,
-    phone: item.phone || item.phoneUnformatted || item.internationalPhoneNumber || null,
-    website: cleanUrl(item.website || item.websiteUri || null),
-    address: item.address || item.formattedAddress || item.vicinity || '—',
-    googleMapsUrl: item.url || item.googleMapsUrl || null,
-    lat: item.location?.lat ?? item.latitude ?? null,
-    lng: item.location?.lng ?? item.longitude ?? null,
-  }));
-}
-
-function getWebsiteStatus(website) {
-  if (!website || website === '—') {
-    return { isPoor: true, type: 'none', label: '🔴 No Website', badgeClass: 'no-website-pill red-pill' };
-  }
-  const w = website.toLowerCase();
-  if (w.includes('.business.site') || w.includes('.wixsite.com') || w.includes('.site123.me') || w.includes('.wordpress.com') || w.includes('.weebly.com') || w.includes('.jimdosite.com')) {
-    let subName = 'Free Builder';
-    if (w.includes('.business.site')) subName = 'Google Business Site';
-    else if (w.includes('.wixsite.com')) subName = 'Wix Subdomain';
-    else if (w.includes('.site123.me')) subName = 'Site123 Subdomain';
-
-    return { isPoor: true, type: 'subdomain', label: `⚠️ Weak Site (${subName})`, badgeClass: 'no-website-pill amber-pill', subName };
-  }
-  return { isPoor: false, type: 'custom', label: 'Custom Domain', badgeClass: '' };
-}
-
-function cleanUrl(url) {
-  if (!url) return null;
-  return url.replace(/^https?:\/\//, '').replace(/\/$/, '');
-}
-
-function applyRatingFilter(leads) {
-  if (!state.minRating) return leads;
-  return leads.filter(l => l.rating !== null && l.rating >= state.minRating);
-}
-
-// ─── Rendering ────────────────────────────────────────────────
-function renderGridView() {
-  const grid = $('leadsGrid');
-  if (!grid) {
-    console.error('🔍 [LeadMapper Debug] renderGridView: #leadsGrid NOT FOUND in DOM!');
-    return;
-  }
-
+// ─── View Switching Engine ───────────────────────────────────
+function setView(viewName) {
+  state.currentView = viewName;
+  console.log(`[LeadMapper View] setView -> "${viewName}"`);
+
+  // Sections
+  const emptyState = $('emptyState');
   const resultsArea = $('resultsArea');
-  console.log(`🔍 [LeadMapper Debug] renderGridView called. filteredLeads=${state.filteredLeads.length}, #resultsArea hidden=${resultsArea ? resultsArea.classList.contains('hidden') : 'NOT FOUND'}, #leadsGrid hidden=${grid.classList.contains('hidden')}`);
+  const followupsArea = $('followupsArea');
+  const closedDealsArea = $('closedDealsArea');
+  const loadingState = $('loadingState');
+  const errorState = $('errorState');
 
-  grid.innerHTML = '';
-
-  if (!state.filteredLeads || state.filteredLeads.length === 0) {
-    grid.innerHTML = `
-      <div style="grid-column: 1 / -1; text-align: center; padding: 40px 20px; background: var(--bg-card); border-radius: var(--radius-lg); border: 1px solid var(--border-subtle); margin-top: 10px;">
-        <div style="font-size: 2rem; margin-bottom: 10px;">🔍</div>
-        <h3 style="font-size: 1.1rem; font-weight: 600; margin-bottom: 6px; color: var(--text-primary);">No leads match your current filters</h3>
-        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 400px; margin: 0 auto 16px auto;">
-          Try clearing filters or search query to see all scraped leads.
-        </p>
-        <button onclick="resetFilters()" class="secondary-btn" style="width: auto; margin: 0 auto; display: inline-flex;">
-          🔄 Reset All Filters
-        </button>
-      </div>
-    `;
-    console.log('🔍 [LeadMapper Debug] renderGridView: rendered empty state (0 leads after filter)');
-    return;
-  }
-
-  let cardsAdded = 0;
-  state.filteredLeads.forEach((lead, i) => {
-    try {
-      const card = createLeadCard(lead, i);
-      card.style.animationDelay = `${Math.min(i * 40, 600)}ms`;
-      grid.appendChild(card);
-      cardsAdded++;
-    } catch(err) {
-      console.error(`🔍 [LeadMapper Debug] renderGridView: ERROR creating card for lead[${i}] "${lead.name}":`, err);
-    }
+  // Hide all sections first
+  [emptyState, resultsArea, followupsArea, closedDealsArea, loadingState, errorState].forEach(el => {
+    if (el) el.classList.add('hidden');
   });
 
-  console.log(`🔍 [LeadMapper Debug] renderGridView: DONE — ${cardsAdded} cards appended to #leadsGrid. DOM children count=${grid.children.length}`);
-}
-
-function createLeadCard(lead, idx) {
-  const card = document.createElement('div');
-  card.className = 'lead-card';
-
-  const ratingHtml = lead.rating !== null
-    ? `<div class="card-rating">
-        ${buildStars(lead.rating)}
-        <span class="rating-label">${lead.rating.toFixed(1)}</span>
-        <span class="reviews-count">(${lead.reviewsCount.toLocaleString()} reviews)</span>
-      </div>`
-    : `<div class="card-rating"><span style="color:var(--text-muted);font-size:0.78rem">No rating</span></div>`;
-
-  const phoneHtml = lead.phone
-    ? `<div class="card-detail-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.42C1.38 2.18 2.22 1 3.46 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-        </svg>
-        ${lead.phone}
-      </div>`
-    : '';
-
-  const isContacted = lead.phone && state.contactedPhones.has(lead.phone);
-
-  const waBtn = lead.phone 
-    ? (isContacted 
-      ? `<button class="card-action-btn contacted-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <polyline points="20 6 9 17 4 12"></polyline>
-          </svg> Contacted
-        </button>`
-      : `<button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${lead.phone}', ${idx})">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path>
-          </svg> WhatsApp
-        </button>`)
-    : '';
-
-  const webStatus = getWebsiteStatus(lead.website);
-  let websiteHtml = '';
-  
-  if (webStatus.type === 'none') {
-    websiteHtml = `<div class="card-detail-row no-website-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-        </svg>
-        <span class="${webStatus.badgeClass}">${webStatus.label}</span>
-      </div>`;
-  } else if (webStatus.type === 'subdomain') {
-    websiteHtml = `<div class="card-detail-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        <a href="https://${lead.website}" target="_blank" rel="noopener" title="${lead.website}">${truncate(lead.website, 28)}</a>
-        <span class="${webStatus.badgeClass}" style="margin-left:4px;">${webStatus.label}</span>
-      </div>`;
-  } else {
-    websiteHtml = `<div class="card-detail-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-        </svg>
-        <a href="https://${lead.website}" target="_blank" rel="noopener" title="${lead.website}">${truncate(lead.website, 30)}</a>
-      </div>`;
-  }
-
-  const addressHtml = lead.address && lead.address !== '—'
-    ? `<div class="card-detail-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-        </svg>
-        ${truncate(lead.address, 45)}
-      </div>`
-    : '';
-
-  const mapsBtn = lead.googleMapsUrl
-    ? `<button class="card-action-btn" onclick="openUrl('${lead.googleMapsUrl}')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-        </svg> Maps
-      </button>`
-    : '';
-
-  const callBtn = lead.phone
-    ? `<button class="card-action-btn phone-btn" onclick="copyText('${lead.phone}', 'Phone copied!')">
-        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.69 12 19.79 19.79 0 0 1 1.63 3.42C1.38 2.18 2.22 1 3.46 1h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L7.91 9.91a16 16 0 0 0 6.16 6.16l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/>
-        </svg> Copy #
-      </button>`
-    : '';
-
-  card.innerHTML = `
-    <div class="card-header">
-      <span class="card-name">${escapeHtml(lead.name)}</span>
-      <span class="card-num">#${lead.num}</span>
-    </div>
-    ${lead.category !== '—' ? `<span class="card-category">${escapeHtml(lead.category)}</span>` : ''}
-    ${ratingHtml}
-    <div class="card-details">
-      ${phoneHtml}
-      ${websiteHtml}
-      ${addressHtml}
-    </div>
-    ${(mapsBtn || callBtn || waBtn) ? `<div class="card-actions">${waBtn}<div class="card-actions-sub">${callBtn}${mapsBtn}</div></div>` : ''}
-  `;
-
-  return card;
-}
-
-function renderTableView() {
-  const tbody = $('leadsTableBody');
-  tbody.innerHTML = '';
-
-  state.filteredLeads.forEach(lead => {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `
-      <td class="td-num">${lead.num}</td>
-      <td class="td-name">${escapeHtml(lead.name)}</td>
-      <td>${escapeHtml(lead.category)}</td>
-      <td class="td-rating">${lead.rating !== null ? lead.rating.toFixed(1) + ' ★' : '—'}</td>
-      <td>${lead.reviewsCount ? lead.reviewsCount.toLocaleString() : '—'}</td>
-      <td>${lead.phone ? escapeHtml(lead.phone) : '—'}</td>
-      <td class="td-link">${lead.website ? `<a href="https://${lead.website}" target="_blank" rel="noopener">${truncate(lead.website, 25)}</a>` : '<span class="no-website-pill">No Website</span>'}</td>
-      <td title="${escapeHtml(lead.address)}">${truncate(escapeHtml(lead.address), 40)}</td>
-    `;
-    tbody.appendChild(tr);
+  // Nav tabs active states
+  ['tabSearch', 'tabResults', 'tabFollowups', 'tabClosedDeals'].forEach(id => {
+    if ($(id)) $(id).classList.remove('active');
   });
-}
 
-function buildStars(rating) {
-  const full = Math.floor(rating);
-  const hasHalf = rating % 1 >= 0.3;
-  const empty = 5 - full - (hasHalf ? 1 : 0);
-  let html = '<div class="stars-visual">';
-  for (let i = 0; i < full; i++) html += '<span class="star filled">★</span>';
-  if (hasHalf) html += '<span class="star half">★</span>';
-  for (let i = 0; i < empty; i++) html += '<span class="star empty">★</span>';
-  html += '</div>';
-  return html;
-}
-
-// ─── View Toggle ─────────────────────────────────────────────
-function setView(view) {
-  console.log(`🔍 [LeadMapper Debug] setView('${view}') called. Current state.leads=${state.leads.length}, contactedPhones=${state.contactedPhones.size}`);
-  state.currentView = view;
   const grid = $('leadsGrid');
   const table = $('tableWrapper');
   const gridBtn = $('viewGrid');
   const tableBtn = $('viewTable');
 
-  if (view === 'grid' || view === 'table') {
-    showState('results');
-    filterLeads();
-    renderGridView();
-    renderTableView();
+  if (viewName === 'empty') {
+    if (emptyState) emptyState.classList.remove('hidden');
+    if ($('tabSearch')) $('tabSearch').classList.add('active');
+  } else if (viewName === 'grid' || viewName === 'table') {
+    if (resultsArea) resultsArea.classList.remove('hidden');
+    if ($('tabResults')) $('tabResults').classList.add('active');
 
-    if (view === 'grid') {
+    if (viewName === 'grid') {
       if (grid) grid.classList.remove('hidden');
       if (table) table.classList.add('hidden');
       if (gridBtn) gridBtn.classList.add('active');
@@ -883,336 +160,62 @@ function setView(view) {
       if (gridBtn) gridBtn.classList.remove('active');
     }
 
-    fetchScrapedLeadsFromDB().then((res) => {
-      console.log(`🔍 [LeadMapper Debug] fetchScrapedLeadsFromDB completed. res=${res}, leads=${state.leads.length}, currentView=${state.currentView}`);
-      filterLeads();
-      renderGridView();
-      renderTableView();
-      if (state.currentView === 'grid' || state.currentView === 'table') {
-        showState('results');
-        if (state.currentView === 'grid') {
-          if (grid) grid.classList.remove('hidden');
-          if (table) table.classList.add('hidden');
-        } else {
-          if (grid) grid.classList.add('hidden');
-          if (table) table.classList.remove('hidden');
-        }
-      }
-    });
-  } else if (view === 'followups') {
-    showState('followups');
-    if ($('followupsArea')) $('followupsArea').classList.remove('hidden');
-    if ($('closedDealsArea')) $('closedDealsArea').classList.add('hidden');
+    renderGridView();
+    renderTableView();
+  } else if (viewName === 'followups') {
+    if (followupsArea) followupsArea.classList.remove('hidden');
+    if ($('tabFollowups')) $('tabFollowups').classList.add('active');
     fetchFollowUpsFromDB();
-  } else if (view === 'closed') {
-    showState('closed');
-    if ($('followupsArea')) $('followupsArea').classList.add('hidden');
-    if ($('closedDealsArea')) $('closedDealsArea').classList.remove('hidden');
+  } else if (viewName === 'closed') {
+    if (closedDealsArea) closedDealsArea.classList.remove('hidden');
+    if ($('tabClosedDeals')) $('tabClosedDeals').classList.add('active');
     fetchFollowUpsFromDB();
   }
 }
 
-function resetFilters() {
-  state.minRating = 0;
-  state.hasPhoneOnly = false;
-  state.minReviews15 = false;
-  state.onlyWithoutWebsite = false;
-  state.onlyContacted = false;
-  
-  if ($('filterInput')) $('filterInput').value = '';
-  if ($('toolbarNoWebsiteBtn')) $('toolbarNoWebsiteBtn').classList.remove('active');
-  if ($('toolbarContactedBtn')) $('toolbarContactedBtn').classList.remove('active');
-  if ($('onlyWithoutWebsiteToggle')) $('onlyWithoutWebsiteToggle').checked = false;
-  if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = false;
-  if ($('hasPhoneOnlyToggle')) $('hasPhoneOnlyToggle').checked = false;
-  if ($('minReviewsToggle')) $('minReviewsToggle').checked = false;
-
-  localStorage.removeItem('only_without_website');
-  localStorage.removeItem('only_contacted');
-  localStorage.removeItem('has_phone_only');
-  localStorage.removeItem('min_reviews_15');
-
-  filterLeads();
-}
-
-// ─── Filter ───────────────────────────────────────────────────
-function toggleNoWebsiteFilter() {
-  state.onlyWithoutWebsite = !state.onlyWithoutWebsite;
-  const toggle = $('onlyWithoutWebsiteToggle');
-  if (toggle) toggle.checked = state.onlyWithoutWebsite;
-  localStorage.setItem('only_without_website', state.onlyWithoutWebsite);
-  filterLeads();
-}
-
-function toggleContactedFilter() {
-  state.onlyContacted = !state.onlyContacted;
-  const toggle = $('onlyContactedToggle');
-  if (toggle) toggle.checked = state.onlyContacted;
-  localStorage.setItem('only_contacted', state.onlyContacted);
-  filterLeads();
-}
-
-function filterLeads() {
-  const filterEl = $('filterInput');
-  const query = filterEl ? filterEl.value.toLowerCase().trim() : '';
-  
-  let processedList = state.leads || [];
-  const initialLen = processedList.length;
-
-  // Deduplication Logic
-  if (state.removeDuplicates) {
-    const uniqueMap = new Map();
-    processedList.forEach(lead => {
-      if (!lead.phone) {
-        uniqueMap.set(`nophone_${lead.num}`, lead);
-      } else {
-        const existing = uniqueMap.get(lead.phone);
-        if (!existing) {
-          uniqueMap.set(lead.phone, lead);
-        } else {
-          const existingScore = (existing.reviewsCount || 0) * (existing.rating || 1);
-          const currentScore = (lead.reviewsCount || 0) * (lead.rating || 1);
-          if (currentScore > existingScore) {
-             uniqueMap.set(lead.phone, lead);
-          }
-        }
-      }
-    });
-    processedList = Array.from(uniqueMap.values());
-  }
-
-  state.filteredLeads = processedList
-    .filter(l => state.minRating === 0 || (l.rating !== null && l.rating >= state.minRating))
-    .filter(l => !state.hasPhoneOnly || (l.phone && l.phone.trim().length > 0))
-    .filter(l => !state.minReviews15 || (l.reviewsCount >= 15))
-    .filter(l => !state.onlyWithoutWebsite || getWebsiteStatus(l.website).isPoor)
-    .filter(l => !state.onlyContacted || (l.phone && state.contactedPhones.has(l.phone)))
-    .filter(l => {
-      if (!query) return true;
-      return (
-        l.name.toLowerCase().includes(query) ||
-        l.category.toLowerCase().includes(query) ||
-        l.address.toLowerCase().includes(query) ||
-        (l.phone && l.phone.includes(query))
-      );
-    });
-
-  state.filteredLeads = state.filteredLeads.map((l, i) => ({ ...l, num: i + 1 }));
-
-  console.log(`🔍 [LeadMapper Debug] filterLeads: start=${initialLen}, afterDedup/filter=${state.filteredLeads.length} (hasPhoneOnly=${state.hasPhoneOnly}, removeDup=${state.removeDuplicates})`);
-
-  renderGridView();
-  renderTableView();
-  if ($('totalCountText')) {
-    $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
-  }
-}
-
-// ─── Outreach Engine ──────────────────────────────────────────
-function generateMessageTemplate(lead) {
-  let template = state.outreachTemplate || 'Hi [Name], I noticed your business on Google Maps.';
-  
-  const safeStr = (val) => val ? String(val) : '';
-  
-  template = template.replace(/\[Name\]/ig, safeStr(lead.name));
-  template = template.replace(/\[Category\]/ig, safeStr(lead.category));
-  template = template.replace(/\[Reviews\]/ig, safeStr(lead.reviewsCount));
-  
-  const ratingStr = lead.rating !== null ? lead.rating.toFixed(1) : '';
-  template = template.replace(/\[Stars\]/ig, ratingStr);
-
-  return template;
-}
-
-function openWhatsApp(phone, leadIdx) {
-  if (!state.outreachTemplate || !state.outreachTemplate.trim()) {
-    state.outreachTemplate = 'Hi [Name], I noticed your business on Google Maps.';
-    if ($('outreachTemplate')) $('outreachTemplate').value = state.outreachTemplate;
-    localStorage.setItem('outreach_template', state.outreachTemplate);
-  }
-
-  // Get the actual filtered lead
-  const lead = state.filteredLeads[leadIdx];
-  if (!lead) return; // defensive
-  
-  state.currentOutreachLead = lead;
-
-  // Format phone number (remove non-digits, keep leading + if exists)
-  let cleanPhone = (phone || '').replace(/[^\d+]/g, '');
-  if (cleanPhone && !cleanPhone.startsWith('+')) cleanPhone = cleanPhone.replace(/^0+/, ''); 
-
-  // Pre-fill modal
-  $('modalPhone').value = cleanPhone;
-  $('modalMessage').value = generateMessageTemplate(lead);
-  
-  $('outreachModal').classList.remove('hidden');
-}
-
-function closeOutreachModal() {
-  $('outreachModal').classList.add('hidden');
-  state.currentOutreachLead = null;
-}
-
-function confirmSendMessage() {
-  if (!state.currentOutreachLead) return;
-
-  const rawPhone = $('modalPhone').value;
-  const finalMessage = $('modalMessage').value;
-
-  // Clean phone number to digits only (WhatsApp requires digits only, NO + sign)
-  const cleanDigits = rawPhone.replace(/\D/g, '');
-
-  if (!cleanDigits) {
-    return showToast('⚠️ Invalid phone number format', 'warning');
-  }
-
-  // Construct direct WhatsApp URL (api.whatsapp.com works on Web, Desktop & Mobile)
-  const encodedMsg = encodeURIComponent(finalMessage);
-  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
-
-  // Launch WhatsApp immediately
-  openUrl(waUrl);
-
-  // Mark as contacted locally immediately for snappy UI
-  if (state.currentOutreachLead.phone) {
-    const leadPhone = state.currentOutreachLead.phone;
-    state.contactedPhones.add(leadPhone);
-    localStorage.setItem('contacted_phones', JSON.stringify([...state.contactedPhones]));
-    
-    // Also save to Supabase if configured
-    if (state.supabaseUrl && state.supabaseKey) {
-      markContactedInDB(state.currentOutreachLead);
-    }
-    
-    renderGridView();
-    renderTableView();
-  }
-
-  closeOutreachModal();
-  showToast('🚀 Launching WhatsApp message...');
-}
-
-// ─── Cloud Database (Supabase) ────────────────────────────────
-async function fetchContactedFromDB() {
-  if (!state.supabaseUrl || !state.supabaseKey) return;
-  
-  try {
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=phone`, {
-      method: 'GET',
-      headers: {
-        'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`
-      }
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      data.forEach(row => {
-        if (row.phone) state.contactedPhones.add(row.phone);
-      });
-      // Save merged remote state down to local storage
-      localStorage.setItem('contacted_phones', JSON.stringify([...state.contactedPhones]));
-      
-      // Update UI if we are on the results screen
-      if (state.filteredLeads.length) {
-        renderGridView();
-        renderTableView();
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase sync failed (fetch):', err);
-  }
-}
-
-async function markContactedInDB(lead) {
-  if (!state.supabaseUrl || !state.supabaseKey) return;
-
-  try {
-    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads`, {
-      method: 'POST',
-      headers: {
-        'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=ignore-duplicates' // Prevents error if phone already exists
-      },
-      body: JSON.stringify({ 
-        phone: lead.phone,
-        name: lead.name,
-        niche: state.activeNiche,
-        status: 'contacted',
-        contacted_at: new Date().toISOString()
-      })
-    });
-  } catch (err) {
-    console.warn('Supabase sync failed (post):', err);
-  }
-}
-
-// ─── Multi-Niche Engine Logic ──────────────────────────────────────
-function switchNiche(nicheKey) {
-  state.activeNiche = nicheKey;
-  localStorage.setItem('active_niche', nicheKey);
-
-  renderNichePills();
-  loadNicheTemplates(nicheKey);
-
-  const config = getNicheConfig(nicheKey);
-  if ($('activeNicheBadge')) $('activeNicheBadge').textContent = `${config.icon} ${config.name} Workspace`;
-  if ($('templateNicheName')) $('templateNicheName').textContent = config.name;
-  if ($('generateNicheLabel')) $('generateNicheLabel').textContent = config.name;
-  if ($('crmNicheTitle')) $('crmNicheTitle').textContent = config.name;
-  if ($('closedNicheTitle')) $('closedNicheTitle').textContent = config.name;
-
-  if ($('searchQuery')) $('searchQuery').value = config.defaultQuery;
-  if ($('locationQuery')) $('locationQuery').value = config.defaultLocation;
-
-  state.leads = [];
-  state.filteredLeads = [];
-
-  // Refetch leads & CRM for new niche
-  fetchContactedFromDB();
-  fetchFollowUpsFromDB();
-  fetchSearchHistoryFromDB();
-  fetchScrapedLeadsFromDB().then(() => {
-    filterLeads();
-    renderGridView();
-    renderTableView();
-  });
-}
-
-function getNicheConfig(key) {
-  if (NICHES[key]) return NICHES[key];
-  const found = state.customNiches.find(n => n.id === key);
-  return found || { id: key, name: key, icon: '📌', defaultQuery: `${key} businesses`, defaultLocation: 'Mumbai, India' };
-}
-
+// ─── Workspace Switcher ──────────────────────────────────────
 function renderNichePills() {
   const container = $('nicheBar');
   if (!container) return;
 
-  const allNiches = [...Object.values(NICHES), ...state.customNiches];
-  
-  let html = allNiches.map(n => `
-    <button class="niche-pill ${state.activeNiche === n.id ? 'active' : ''}" data-niche="${n.id}" onclick="switchNiche('${n.id}')">
-      <span>${n.icon}</span> ${escapeHtml(n.name)}
-    </button>
-  `).join('');
+  const defaultKeys = ['coaching', 'makeup', 'cardenting'];
+  let html = defaultKeys.map(key => {
+    const config = DEFAULT_NICHES[key];
+    const activeClass = state.activeNiche === key ? 'active' : '';
+    return `<button class="niche-pill ${activeClass}" onclick="switchNiche('${key}')"><span>${config.icon}</span> ${config.name}</button>`;
+  }).join('');
 
-  html += `
-    <button class="niche-pill add-niche-btn" onclick="promptAddNewNiche()">
-      <span>➕</span> Add Niche
-    </button>
-  `;
+  state.customNiches.forEach(custom => {
+    const activeClass = state.activeNiche === custom.id ? 'active' : '';
+    html += `<button class="niche-pill ${activeClass}" onclick="switchNiche('${custom.id}')"><span>${custom.icon}</span> ${custom.name}</button>`;
+  });
+
+  html += `<button class="niche-pill" onclick="promptAddNewNiche()"><span>➕</span> Add Niche</button>`;
+  html += `<button class="niche-pill" onclick="openImportModal()"><span>📥</span> Import Dataset</button>`;
 
   container.innerHTML = html;
 }
 
-function promptAddNewNiche() {
-  const name = prompt('Enter New Niche Vertical Name (e.g. Photographer, Dentist, Real Estate):');
-  if (!name || !name.trim()) return;
+function switchNiche(nicheKey) {
+  state.activeNiche = nicheKey;
+  renderNichePills();
 
-  const icon = prompt('Enter an Emoji Icon for this Niche (e.g. 📸, 🦷, 🏢):') || '📌';
+  const config = getNicheConfig(nicheKey);
+  if ($('activeNicheBadge')) $('activeNicheBadge').textContent = `${config.icon} ${config.name} Workspace`;
+  if ($('searchQuery')) $('searchQuery').value = config.defaultQuery;
+  if ($('locationQuery')) $('locationQuery').value = config.defaultLocation;
+  if ($('crmNicheTitle')) $('crmNicheTitle').textContent = config.name;
+
+  restoreActiveSession();
+  fetchScrapedLeadsFromDB();
+  fetchFollowUpsFromDB();
+  showToast(`Active workspace: ${config.name}`);
+}
+
+function promptAddNewNiche() {
+  const name = prompt('Enter new workspace name (e.g. Real Estate):');
+  if (!name || !name.trim()) return;
+  const icon = prompt('Enter an emoji icon (e.g. 🏠):') || '🏢';
   const cleanId = name.toLowerCase().replace(/[^a-z0-9]/g, '');
 
   const newNiche = {
@@ -1226,401 +229,276 @@ function promptAddNewNiche() {
   state.customNiches.push(newNiche);
   localStorage.setItem('custom_niches', JSON.stringify(state.customNiches));
   switchNiche(cleanId);
-  showToast(`✨ New workspace "${name.trim()}" created!`, 'success');
 }
 
-function loadNicheTemplates(nicheKey) {
-  const config = getNicheConfig(nicheKey);
-  const savedTpl = localStorage.getItem(`outreach_template_${nicheKey}`) || config.template || 'Hi [Name], I noticed your business...';
-  const savedFol = localStorage.getItem(`outreach_followup_template_${nicheKey}`) || config.followup || 'Hi [Name], floating this to top of your inbox...';
+// ─── Filtering Logic ─────────────────────────────────────────
+function filterLeads() {
+  const query = $('filterInput') ? $('filterInput').value.toLowerCase().trim() : '';
+  let list = state.leads || [];
 
-  state.outreachTemplate = savedTpl;
-  state.outreachFollowupTemplate = savedFol;
-
-  if ($('outreachTemplate')) $('outreachTemplate').value = savedTpl;
-  if ($('outreachFollowupTemplate')) $('outreachFollowupTemplate').value = savedFol;
-}
-
-// ─── Follow-up CRM Logic ─────────────────────────────────────────
-
-async function fetchFollowUpsFromDB() {
-  console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB started. activeNiche=${state.activeNiche}`);
-  if (!state.supabaseUrl || !state.supabaseKey) {
-    console.warn(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB: Supabase URL or Key missing!`);
-    if ($('followupsSubtitle')) $('followupsSubtitle').textContent = "Connect Supabase to load follow-ups!";
-    return;
-  }
-  
-  try {
-    const nicheFilter = state.activeNiche === 'coaching' 
-      ? `or=(niche.eq.coaching,niche.is.null)` 
-      : `niche=eq.${state.activeNiche}`;
-
-    let res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&${nicheFilter}&order=contacted_at.asc`, {
-      method: 'GET',
-      headers: {
-        'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`
+  if (state.removeDuplicates) {
+    const map = new Map();
+    list.forEach(lead => {
+      if (!lead.phone) {
+        map.set(`no_phone_${lead.num}`, lead);
+      } else {
+        if (!map.has(lead.phone)) map.set(lead.phone, lead);
       }
     });
-
-    if (!res.ok) {
-      console.warn(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB filtered query status=${res.status}, trying fallback...`);
-      res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
-        method: 'GET',
-        headers: {
-          'apikey': state.supabaseKey,
-          'Authorization': `Bearer ${state.supabaseKey}`
-        }
-      });
-    }
-
-    if (res.ok) {
-      const data = await res.json();
-      console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB success: raw count=${data.length}`);
-      state.followups = data.filter(d => d.status !== 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
-      state.closedDeals = data.filter(d => d.status === 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
-      console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB parsed: followups=${state.followups.length}, closedDeals=${state.closedDeals.length}`);
-
-      renderFollowUpsView();
-      renderClosedDealsView();
-
-      if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.followups.length;
-      if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
-      if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} Leads to follow up with`;
-      if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} Won client deals in ${getNicheConfig(state.activeNiche).name}`;
-
-      // Enforce correct active view after async fetch resolves
-      if (state.currentView === 'followups') {
-        showState('followups');
-        if ($('followupsArea')) $('followupsArea').classList.remove('hidden');
-      } else if (state.currentView === 'closed') {
-        showState('closed');
-        if ($('closedDealsArea')) $('closedDealsArea').classList.remove('hidden');
-      }
-    } else {
-      console.error(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB HTTP error status=${res.status}`);
-    }
-  } catch (err) {
-    console.error('Supabase follow-up fetch failed:', err);
+    list = Array.from(map.values());
   }
+
+  state.filteredLeads = list.filter(l => {
+    if (state.minRating > 0 && (l.rating === null || l.rating < state.minRating)) return false;
+    if (state.hasPhoneOnly && (!l.phone || !l.phone.trim())) return false;
+    if (state.minReviews15 && l.reviewsCount < 15) return false;
+    if (state.onlyWithoutWebsite && l.website) return false;
+    if (state.onlyContacted && (!l.phone || !state.contactedPhones.has(l.phone))) return false;
+    if (query) {
+      const matchName = l.name.toLowerCase().includes(query);
+      const matchCategory = l.category.toLowerCase().includes(query);
+      const matchAddress = l.address.toLowerCase().includes(query);
+      const matchPhone = l.phone && l.phone.includes(query);
+      if (!matchName && !matchCategory && !matchAddress && !matchPhone) return false;
+    }
+    return true;
+  }).map((l, i) => ({ ...l, num: i + 1 }));
+
+  renderGridView();
+  renderTableView();
+
+  if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
+  if ($('resultsSubtitle')) $('resultsSubtitle').textContent = `${state.filteredLeads.length} leads matching filters`;
 }
 
-function renderFollowUpsView() {
-  const grid = $('followupsGrid');
-  if (!grid) {
-    console.error('🔍 [LeadMapper Debug] renderFollowUpsView: #followupsGrid DOM element NOT FOUND!');
-    return;
-  }
+function toggleNoWebsiteFilter() {
+  state.onlyWithoutWebsite = !state.onlyWithoutWebsite;
+  if ($('toolbarNoWebsiteBtn')) $('toolbarNoWebsiteBtn').classList.toggle('active', state.onlyWithoutWebsite);
+  filterLeads();
+}
+
+function toggleContactedFilter() {
+  state.onlyContacted = !state.onlyContacted;
+  if ($('toolbarContactedBtn')) $('toolbarContactedBtn').classList.toggle('active', state.onlyContacted);
+  filterLeads();
+}
+
+// ─── Rendering Engine ────────────────────────────────────────
+function renderGridView() {
+  const grid = $('leadsGrid');
+  if (!grid) return;
   grid.innerHTML = '';
-  console.log(`🔍 [LeadMapper Debug] renderFollowUpsView rendering ${state.followups ? state.followups.length : 0} items to #followupsGrid`);
-  
-  if (!state.followups || state.followups.length === 0) {
-    grid.innerHTML = `<div style="color:var(--text-muted); padding:30px; text-align:center; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px; opacity:0.5;">
-        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-      </svg>
-      <div>No contacted leads found yet. Send your first outreach to start!</div>
-    </div>`;
-    return;
-  }
 
-  const now = new Date();
-  
-  state.followups.forEach(item => {
-    const card = document.createElement('div');
-    card.className = 'followup-card';
-    
-    const contactedDate = item.contacted_at ? new Date(item.contacted_at) : new Date();
-    const diffMs = now - contactedDate;
-    const hoursAgo = Math.floor(diffMs / (1000 * 60 * 60));
-    const daysAgo = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-    
-    const dateStr = contactedDate.toLocaleDateString() + ' @ ' + contactedDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
-    const count = item.followups_sent || 0;
-    
-    let btnText = 'Send Follow-up';
-    let btnClass = 'followup-btn-disabled';
-    let badgeHtml = '';
-    let isDisabled = false;
-    const isUrgent = daysAgo >= 3;
-
-    if (count === 0) {
-      if (isUrgent) {
-        btnText = '🔥 Send Follow-up #1 (Due)';
-        btnClass = 'followup-btn-red';
-        badgeHtml = `<span class="followup-badge badge-due">🔥 ${daysAgo}d ago — Follow-up #1 Due</span>`;
-        isDisabled = false;
-      } else {
-        const remainingDays = 3 - Math.max(0, daysAgo);
-        btnText = `⏳ Wait ${remainingDays}d to Follow-up #1`;
-        btnClass = 'followup-btn-disabled';
-        const timeText = hoursAgo < 24 ? `${hoursAgo}h ago` : `${daysAgo}d ago`;
-        badgeHtml = `<span class="followup-badge badge-recent">⏳ Contacted ${timeText} (Locked)</span>`;
-        isDisabled = true;
-      }
-    } else if (count === 1) {
-      if (isUrgent) {
-        btnText = '🔥 Send Final Follow-up';
-        btnClass = 'followup-btn-red';
-        badgeHtml = `<span class="followup-badge badge-due">🔥 ${daysAgo}d ago — Final Follow-up Due</span>`;
-        isDisabled = false;
-      } else {
-        const remainingDays = 3 - Math.max(0, daysAgo);
-        btnText = `⏳ Wait ${remainingDays}d to Final Follow-up`;
-        btnClass = 'followup-btn-disabled';
-        badgeHtml = `<span class="followup-badge badge-followed">⏳ Followed up 1x (${daysAgo}d ago - Locked)</span>`;
-        isDisabled = true;
-      }
-    } else {
-      btnText = '🛑 Sequence Completed (2x Sent)';
-      btnClass = 'followup-btn-complete';
-      badgeHtml = `<span class="followup-badge badge-complete">✅ Final Follow-up Sent (2x)</span>`;
-      isDisabled = true;
-    }
-
-    card.innerHTML = `
-      <div class="followup-header">
-        <div class="followup-title-row">
-          <div class="followup-name">${escapeHtml(item.name || 'Unknown Business')}</div>
-          <div class="card-menu-wrapper">
-            <button class="three-dots-btn" onclick="toggleCardMenu(event, '${item.id}')" title="Actions">⋮</button>
-            <div class="three-dots-dropdown" id="cardMenu_${item.id}">
-              <button class="dropdown-item" onclick="markDealClosed('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}')">
-                🏆 Mark Deal Closed
-              </button>
-            </div>
-          </div>
-        </div>
-        <div>${badgeHtml}</div>
-      </div>
-      <div class="followup-meta">
-        <div>📞 <strong>${escapeHtml(item.phone)}</strong></div>
-        <div class="followup-date">Last contact: ${dateStr}</div>
-      </div>
-      <div class="followup-card-actions">
-        <button class="followup-action-btn ${btnClass}" ${isDisabled ? 'disabled' : ''} onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
-          <svg fill="currentColor" viewBox="0 0 24 24" width="16" height="16">
-            <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-          </svg> ${btnText}
-        </button>
+  if (!state.filteredLeads || state.filteredLeads.length === 0) {
+    grid.innerHTML = `
+      <div style="grid-column:1/-1; text-align:center; padding:40px; background:#fff; border-radius:12px; border:1px solid #e2e8f0;">
+        <div style="font-size:2rem; margin-bottom:8px;">🔍</div>
+        <h3 style="font-size:1.1rem; font-weight:700;">No leads match filters</h3>
+        <p style="font-size:0.85rem; color:#64748b; margin-bottom:16px;">Try clearing search or filter toggles.</p>
+        <button class="secondary-btn" onclick="resetFilters()">Reset All Filters</button>
       </div>
     `;
+    return;
+  }
+
+  state.filteredLeads.forEach((lead, idx) => {
+    const card = document.createElement('div');
+    card.className = 'lead-card';
     
+    const isContacted = lead.phone && state.contactedPhones.has(lead.phone);
+    const waClass = isContacted ? 'contacted-btn' : 'whatsapp-btn';
+    const waText = isContacted ? '✓ Contacted' : '💬 WhatsApp';
+
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-name">${escapeHtml(lead.name)}</span>
+        <span class="card-num">#${lead.num}</span>
+      </div>
+      <span class="card-category">${escapeHtml(lead.category)}</span>
+      <div class="card-rating">
+        ⭐ <b>${lead.rating ? lead.rating.toFixed(1) : 'N/A'}</b> (${lead.reviewsCount || 0} reviews)
+      </div>
+      <div class="card-details">
+        ${lead.phone ? `<div class="card-detail-row">📞 ${lead.phone}</div>` : ''}
+        ${lead.website ? `<div class="card-detail-row">🌐 <a href="https://${lead.website}" target="_blank">${truncate(lead.website, 28)}</a></div>` : '<div class="card-detail-row">🌐 No website</div>'}
+        <div class="card-detail-row">📍 ${truncate(lead.address, 35)}</div>
+      </div>
+      <div class="card-actions">
+        ${lead.phone ? `<button class="card-action-btn ${waClass}" onclick="openWhatsApp('${lead.phone}', ${idx})">${waText}</button>` : ''}
+        ${lead.googleMapsUrl ? `<button class="card-action-btn" onclick="window.open('${lead.googleMapsUrl}', '_blank')">📍 Maps</button>` : ''}
+      </div>
+    `;
     grid.appendChild(card);
   });
 }
 
-function sendFollowUpMessage(id, phone, name, currentCount) {
-  const template = $('outreachFollowupTemplate').value;
-  if (!template.trim()) {
-    return showToast('⚠️ Please enter a Follow-up template first', 'warning');
+function renderTableView() {
+  const tbody = $('leadsTableBody');
+  if (!tbody) return;
+  tbody.innerHTML = '';
+
+  state.filteredLeads.forEach(lead => {
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>${lead.num}</td>
+      <td><b>${escapeHtml(lead.name)}</b></td>
+      <td>${escapeHtml(lead.category)}</td>
+      <td>⭐ ${lead.rating ? lead.rating.toFixed(1) : 'N/A'}</td>
+      <td>${lead.reviewsCount || 0}</td>
+      <td>${lead.phone || '—'}</td>
+      <td>${lead.website ? `<a href="https://${lead.website}" target="_blank">${truncate(lead.website, 24)}</a>` : '—'}</td>
+      <td>${truncate(lead.address, 30)}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+function renderFollowUpsView() {
+  const grid = $('followupsGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  if (!state.followups || state.followups.length === 0) {
+    grid.innerHTML = `<div style="grid-column:1/-1; padding:30px; text-align:center; background:#fff; border-radius:12px; border:1px solid #e2e8f0; color:#64748b;">No contacted leads found yet. Click WhatsApp on any scraped lead to start outreach!</div>`;
+    return;
   }
 
-  // Replace variable
-  const finalMessage = template.replace(/\[Name\]/ig, name || 'there');
-    
-  // Format phone to digits only (strip + sign and spaces)
-  const cleanDigits = (phone || '').replace(/\D/g, '');
-  if (!cleanDigits) {
-    return showToast('⚠️ Invalid phone number for WhatsApp', 'warning');
-  }
-  
-  // Async update db to refresh the timer and increment the count
-  updateFollowUpInDB(id, currentCount + 1);
-  
-  // Open WA
-  const encodedMsg = encodeURIComponent(finalMessage);
-  const waUrl = `https://api.whatsapp.com/send?phone=${cleanDigits}&text=${encodedMsg}`;
-  openUrl(waUrl);
+  state.followups.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'followup-card';
+    card.innerHTML = `
+      <div class="card-header">
+        <span class="card-name">${escapeHtml(item.name || 'Lead')}</span>
+        <span class="card-num">Contacted</span>
+      </div>
+      <div class="card-details">
+        <div class="card-detail-row">📞 ${item.phone}</div>
+        <div class="card-detail-row">🕒 Contacted: ${item.contacted_at ? new Date(item.contacted_at).toLocaleDateString() : 'Today'}</div>
+      </div>
+      <div class="card-actions">
+        <button class="card-action-btn whatsapp-btn" onclick="openWhatsApp('${item.phone}')">💬 Re-engage</button>
+        <button class="card-action-btn" onclick="markDealClosed('${item.phone}')">⭐ Mark Won</button>
+      </div>
+    `;
+    grid.appendChild(card);
+  });
 }
 
 function renderClosedDealsView() {
   const grid = $('closedDealsGrid');
   if (!grid) return;
   grid.innerHTML = '';
-  
+
   if (!state.closedDeals || state.closedDeals.length === 0) {
-    grid.innerHTML = `<div style="color:var(--text-muted); padding:30px; text-align:center; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-subtle); grid-column: 1 / -1;">
-      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#fbbf24" stroke-width="1.5" style="margin-bottom:10px;">
-        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
-      </svg>
-      <div>No closed deals yet in ${getNicheConfig(state.activeNiche).name}. Keep reaching out to convert your first client!</div>
-    </div>`;
+    grid.innerHTML = `<div style="grid-column:1/-1; padding:30px; text-align:center; background:#fff; border-radius:12px; border:1px solid #e2e8f0; color:#64748b;">No won deals logged yet. Move leads from Contacted CRM to Closed Deals!</div>`;
     return;
   }
 
   state.closedDeals.forEach(item => {
     const card = document.createElement('div');
-    card.className = 'followup-card closed-deal-card';
-    const closedDate = item.deal_closed_at ? new Date(item.deal_closed_at).toLocaleDateString() : 'Recently';
-    
+    card.className = 'lead-card';
     card.innerHTML = `
-      <div class="followup-header">
-        <div class="followup-name">${escapeHtml(item.name || 'Client Business')}</div>
-        <div><span class="followup-badge badge-closed">🏆 Deal Closed (${closedDate})</span></div>
+      <div class="card-header">
+        <span class="card-name">🏆 ${escapeHtml(item.name || 'Won Client')}</span>
       </div>
-      <div class="followup-meta">
-        <div>📞 <strong>${escapeHtml(item.phone)}</strong></div>
-        <div class="followup-date">Niche: ${getNicheConfig(item.niche || state.activeNiche).name}</div>
-      </div>
-      <div class="closed-congrats-banner">
-        🎉 Client Converted & Won!
+      <div class="card-details">
+        <div class="card-detail-row">📞 ${item.phone}</div>
+        <div class="card-detail-row">🎉 Closed deal in ${getNicheConfig(state.activeNiche).name}</div>
       </div>
     `;
     grid.appendChild(card);
   });
 }
 
-function toggleCardMenu(e, id) {
-  e.stopPropagation();
-  const menu = $(`cardMenu_${id}`);
-  document.querySelectorAll('.three-dots-dropdown').forEach(el => {
-    if (el !== menu) el.classList.remove('show');
-  });
-  if (menu) menu.classList.toggle('show');
+function resetFilters() {
+  state.minRating = 0;
+  state.hasPhoneOnly = false;
+  state.minReviews15 = false;
+  state.onlyWithoutWebsite = false;
+  state.onlyContacted = false;
+
+  if ($('filterInput')) $('filterInput').value = '';
+  if ($('toolbarNoWebsiteBtn')) $('toolbarNoWebsiteBtn').classList.remove('active');
+  if ($('toolbarContactedBtn')) $('toolbarContactedBtn').classList.remove('active');
+  if ($('onlyWithoutWebsiteToggle')) $('onlyWithoutWebsiteToggle').checked = false;
+  if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = false;
+  if ($('hasPhoneOnlyToggle')) $('hasPhoneOnlyToggle').checked = false;
+  if ($('minReviewsToggle')) $('minReviewsToggle').checked = false;
+
+  filterLeads();
 }
 
-document.addEventListener('click', () => {
-  document.querySelectorAll('.three-dots-dropdown').forEach(el => el.classList.remove('show'));
-});
+// ─── WhatsApp & Outreach Handler ─────────────────────────────
+function openWhatsApp(phone, leadIndex) {
+  if (!phone) return;
+  const cleanPhone = phone.replace(/[^0-9+]/g, '');
+  state.contactedPhones.add(cleanPhone);
+  if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.contactedPhones.size;
 
-async function markDealClosed(id, phone, name) {
-  if (!confirm(`🎉 Mark deal with "${name}" as CLOSED & WON?`)) return;
+  const lead = leadIndex !== undefined ? state.filteredLeads[leadIndex] : null;
+  const config = getNicheConfig(state.activeNiche);
+  let template = config.template || 'Hi [Name], reaching out regarding your business...';
 
-  if (!state.supabaseUrl || !state.supabaseKey) {
-    // Local fallback
-    state.followups = state.followups.filter(f => f.phone !== phone);
-    renderFollowUpsView();
-    showToast(`🎉 Deal marked closed for ${name}!`, 'success');
-    return;
+  if (lead) {
+    template = template.replace(/\[Name\]/g, lead.name)
+                       .replace(/\[Location\]/g, lead.address || 'your city');
   }
 
+  const url = `https://wa.me/${cleanPhone.replace('+', '')}?text=${encodeURIComponent(template)}`;
+  window.open(url, '_blank');
+
+  // Push to Supabase contacted_leads
+  saveContactedToDB(lead ? lead.name : 'Outreach Lead', cleanPhone);
+  filterLeads();
+}
+
+async function saveContactedToDB(name, phone) {
+  if (!state.supabaseUrl || !state.supabaseKey) return;
   try {
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?id=eq.${id}`, {
-      method: 'PATCH',
+    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads`, {
+      method: 'POST',
       headers: {
         'apikey': state.supabaseKey,
         'Authorization': `Bearer ${state.supabaseKey}`,
-        'Content-Type': 'application/json'
+        'Content-Type': 'application/json',
+        'Prefer': 'resolution=merge-duplicates'
       },
       body: JSON.stringify({
-        status: 'closed',
-        deal_closed_at: new Date().toISOString()
+        phone: phone,
+        name: name,
+        niche: state.activeNiche,
+        contacted_at: new Date().toISOString(),
+        status: 'contacted'
       })
     });
-
-    if (res.ok) {
-      showToast(`🏆 Congratulations! Deal closed with ${name}!`, 'success');
-      fetchFollowUpsFromDB();
-    } else {
-      showToast('⚠️ Could not update deal status in DB', 'error');
-    }
-  } catch (err) {
-    console.warn('Mark deal closed failed:', err);
-  }
-}
-
-function openSettingsModal() {
-  const modal = $('settingsModal');
-  if ($('supabaseUrl') && state.supabaseUrl) $('supabaseUrl').value = state.supabaseUrl;
-  if ($('supabaseKey') && state.supabaseKey) $('supabaseKey').value = state.supabaseKey;
-  if ($('apifyApiKey')) {
-    const savedApiKey = localStorage.getItem('apify_api_key');
-    if (savedApiKey) $('apifyApiKey').value = savedApiKey;
-  }
-  if (modal) modal.classList.remove('hidden');
-}
-
-function closeSettingsModal() {
-  const modal = $('settingsModal');
-  if ($('supabaseUrl')) {
-    state.supabaseUrl = $('supabaseUrl').value.trim();
-    localStorage.setItem('supabase_url', state.supabaseUrl);
-  }
-  if ($('supabaseKey')) {
-    state.supabaseKey = $('supabaseKey').value.trim();
-    localStorage.setItem('supabase_key', state.supabaseKey);
-  }
-  if ($('apifyApiKey')) {
-    localStorage.setItem('apify_api_key', $('apifyApiKey').value.trim());
-  }
-
-  if (modal) modal.classList.add('hidden');
-  showToast('⚙️ Settings saved & applied!', 'success');
-  
-  if (state.supabaseUrl && state.supabaseKey) {
-    fetchContactedFromDB();
     fetchFollowUpsFromDB();
-  }
+  } catch(e) {}
 }
 
-async function updateFollowUpInDB(id, newCount) {
+async function markDealClosed(phone) {
   if (!state.supabaseUrl || !state.supabaseKey) return;
   try {
-    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?id=eq.${id}`, {
+    await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?phone=eq.${phone}`, {
       method: 'PATCH',
       headers: {
         'apikey': state.supabaseKey,
         'Authorization': `Bearer ${state.supabaseKey}`,
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify({ 
-        followups_sent: newCount,
-        contacted_at: new Date().toISOString()
-      })
+      body: JSON.stringify({ status: 'closed' })
     });
-    // refresh the view
+    showToast('🎉 Lead marked as Won Deal!');
     fetchFollowUpsFromDB();
-  } catch(e) {
-    console.warn("Failed to update followup", e);
-  }
+  } catch(e) {}
 }
 
-
-async function fetchSearchHistoryFromDB() {
-  if (!state.supabaseUrl || !state.supabaseKey) return;
-  
-  try {
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&niche=eq.${state.activeNiche}&order=created_at.desc&limit=10`, {
-      method: 'GET',
-      headers: {
-        'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`
-      }
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      renderSearchHistory(data);
-
-      // Cross-device automatic cloud restoration:
-      // If mobile or new device has no leads loaded locally yet, automatically load the latest dataset from Supabase!
-      if ((!state.leads || state.leads.length === 0) && data.length > 0) {
-        const latest = data.find(item => item.results_data && Array.isArray(item.results_data) && item.results_data.length > 0);
-        if (latest) {
-          state.leads = latest.results_data;
-          if ($('searchQuery')) $('searchQuery').value = latest.search_query || '';
-          if ($('locationQuery')) $('locationQuery').value = latest.location_query || '';
-          filterLeads();
-          updateResultsMeta(latest.search_query || 'Cloud Sync', latest.location_query || 'Supabase', state.filteredLeads.length);
-          showState('results');
-          saveActiveSession(latest.search_query, latest.location_query, latest.results_data);
-          showToast(`☁️ Synced ${state.filteredLeads.length} leads from Supabase!`);
-        }
-      }
-    }
-  } catch (err) {
-    console.warn('Supabase search history fetch failed:', err);
-  }
-}
-
+// ─── Database Sync Handlers ──────────────────────────────────
 async function fetchScrapedLeadsFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) return false;
-  
+
   try {
-    const nicheFilter = state.activeNiche === 'coaching' 
-      ? `or=(niche.eq.coaching,niche.is.null)` 
+    const nicheFilter = state.activeNiche === 'coaching'
+      ? `or=(niche.eq.coaching,niche.is.null)`
       : `niche=eq.${state.activeNiche}`;
 
     let res = await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads?select=*&${nicheFilter}&order=created_at.desc&limit=300`, {
@@ -1644,11 +522,11 @@ async function fetchScrapedLeadsFromDB() {
     if (res.ok) {
       const data = await res.json();
       if (data && data.length > 0) {
-        const leads = data.map((d, idx) => ({
+        state.leads = data.map((d, idx) => ({
           num: idx + 1,
           name: d.name || 'Unknown Business',
           category: d.category || '—',
-          rating: d.rating !== null && d.rating !== undefined ? parseFloat(d.rating) : null,
+          rating: d.rating ? parseFloat(d.rating) : null,
           reviewsCount: d.reviews_count || 0,
           phone: d.phone || null,
           website: d.website || null,
@@ -1657,335 +535,165 @@ async function fetchScrapedLeadsFromDB() {
           niche: d.niche || 'coaching'
         }));
 
-        state.leads = leads;
         filterLeads();
-        renderGridView();
-        renderTableView();
-        
-        if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = leads.length;
-        updateResultsMeta(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase Scraped Leads', state.filteredLeads.length);
-        
-        saveActiveSession(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase', leads);
-        
-        // ONLY switch view to results if the user is currently on grid/table tab
-        if (state.currentView === 'grid' || state.currentView === 'table') {
-          showState('results');
-        }
+        if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
+        saveActiveSession(`Cloud DB`, 'Supabase', state.leads);
         return true;
       }
     }
   } catch (err) {
-    console.warn('Supabase scraped_leads fetch failed:', err);
+    console.warn('Supabase fetch error:', err);
   }
   return false;
 }
 
-async function saveLeadsToScrapedLeadsTable(leads) {
-  if (!state.supabaseUrl || !state.supabaseKey || !leads || leads.length === 0) return;
-
-  try {
-    const rows = leads.map(l => ({
-      name: l.name || 'Unknown Business',
-      category: l.category || '—',
-      rating: l.rating ?? null,
-      reviews_count: l.reviewsCount ?? 0,
-      phone: l.phone || null,
-      website: l.website || null,
-      address: l.address || null,
-      google_maps_url: l.googleMapsUrl || null,
-      niche: state.activeNiche
-    }));
-
-    await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads`, {
-      method: 'POST',
-      headers: {
-        'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`,
-        'Content-Type': 'application/json',
-        'Prefer': 'resolution=ignore-duplicates'
-      },
-      body: JSON.stringify(rows)
-    });
-  } catch (err) {
-    console.warn('Supabase scraped_leads table insert notice:', err);
-  }
-}
-
-async function saveSearchToDB(query, location, resultsData = null) {
+async function fetchFollowUpsFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) return;
-
   try {
-    await fetch(`${state.supabaseUrl}/rest/v1/search_history`, {
-      method: 'POST',
+    let res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
+      method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
-        'Authorization': `Bearer ${state.supabaseKey}`,
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ 
-        search_query: query,
-        location_query: location,
-        results_data: resultsData,
-        niche: state.activeNiche
-      })
-    });
-
-    if (resultsData && Array.isArray(resultsData)) {
-      saveLeadsToScrapedLeadsTable(resultsData);
-    }
-
-    // refresh history list after saving
-    fetchSearchHistoryFromDB();
-  } catch (err) {
-    console.warn('Supabase search history save failed:', err);
-  }
-}
-
-function renderSearchHistory(historyItems) {
-  const container = $('recentSearchesSection');
-  const list = $('recentSearchesList');
-  if (!container || !list) return;
-  
-  if (!historyItems || historyItems.length === 0) {
-    container.classList.add('hidden');
-    return;
-  }
-  
-  list.innerHTML = '';
-  container.classList.remove('hidden');
-
-  historyItems.forEach(item => {
-    const pill = document.createElement('div');
-    pill.className = 'search-pill';
-    
-    // Calculate relative time or simple date formatting
-    const date = new Date(item.created_at);
-    const dateStr = date.toLocaleDateString();
-
-    const isCached = item.results_data && Array.isArray(item.results_data);
-    const cachedBadge = isCached 
-      ? `<span style="color:var(--accent-secondary); margin-left:6px;" title="Loads instantly without spending credits">⚡ Cached</span>` 
-      : '';
-
-    pill.innerHTML = `
-      <div class="search-pill-query">${escapeHtml(item.search_query)}</div>
-      <div class="search-pill-meta">
-        <span class="location-text">
-          <svg width="10" height="10" style="margin-right:2px; vertical-align:middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
-          </svg>
-          ${escapeHtml(item.location_query)}
-        </span>
-        <span class="time-text">${dateStr}${cachedBadge}</span>
-      </div>
-    `;
-
-    // Click to replay search
-    pill.addEventListener('click', () => {
-      $('searchQuery').value = item.search_query;
-      $('locationQuery').value = item.location_query;
-      
-      if (item.results_data && Array.isArray(item.results_data)) {
-        // Load dynamically from cache
-        state.leads = item.results_data;
-        filterLeads();
-        updateResultsMeta(item.search_query, item.location_query, state.filteredLeads.length);
-        $('totalCountText').textContent = `${state.filteredLeads.length} leads found`;
-        showState('results');
-        showToast(`⚡ Loaded ${state.filteredLeads.length} results from cache!`);
-      } else {
-        // Just fill the inputs if no cache exists
-        $('searchQuery').style.borderColor = 'var(--accent-secondary)';
-        $('locationQuery').style.borderColor = 'var(--accent-secondary)';
-        setTimeout(() => {
-          $('searchQuery').style.borderColor = '';
-          $('locationQuery').style.borderColor = '';
-        }, 800);
+        'Authorization': `Bearer ${state.supabaseKey}`
       }
     });
 
-    list.appendChild(pill);
-  });
+    if (res.ok) {
+      const data = await res.json();
+      data.forEach(row => { if (row.phone) state.contactedPhones.add(row.phone); });
+
+      state.followups = data.filter(d => d.status !== 'closed');
+      state.closedDeals = data.filter(d => d.status === 'closed');
+
+      renderFollowUpsView();
+      renderClosedDealsView();
+
+      if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.followups.length;
+      if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
+      if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} leads in outreach pipeline`;
+      if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} won deals`;
+    }
+  } catch(e) {}
 }
 
-// ─── Export to CSV ────────────────────────────────────────────
+function saveActiveSession(query, location, leads) {
+  try {
+    const sessionData = { query, location, leads, timestamp: Date.now(), niche: state.activeNiche };
+    localStorage.setItem(`leadmapper_active_session_${state.activeNiche}`, JSON.stringify(sessionData));
+  } catch (e) {}
+}
+
+function restoreActiveSession() {
+  const saved = localStorage.getItem(`leadmapper_active_session_${state.activeNiche}`);
+  if (!saved) {
+    state.leads = [];
+    state.filteredLeads = [];
+    if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = '0';
+    return false;
+  }
+  try {
+    const session = JSON.parse(saved);
+    if (session && session.leads && Array.isArray(session.leads) && session.leads.length > 0) {
+      state.leads = session.leads;
+      filterLeads();
+      return true;
+    }
+  } catch (e) {}
+  return false;
+}
+
+// ─── Export CSV ──────────────────────────────────────────────
 function exportCSV() {
   if (!state.filteredLeads.length) return showToast('No leads to export');
-
-  const headers = ['#', 'Name', 'Category', 'Rating', 'Reviews', 'Phone', 'Website', 'Address', 'Google Maps URL'];
+  const headers = ['#', 'Name', 'Category', 'Rating', 'Reviews', 'Phone', 'Website', 'Address'];
   const rows = state.filteredLeads.map(l => [
     l.num,
-    csvEscape(l.name),
-    csvEscape(l.category),
-    l.rating !== null ? l.rating.toFixed(1) : '',
-    l.reviewsCount ?? '',
-    csvEscape(l.phone ?? ''),
-    csvEscape(l.website ? `https://${l.website}` : ''),
-    csvEscape(l.address),
-    csvEscape(l.googleMapsUrl ?? ''),
+    `"${(l.name || '').replace(/"/g, '""')}"`,
+    `"${(l.category || '').replace(/"/g, '""')}"`,
+    l.rating || '',
+    l.reviewsCount || 0,
+    `"${l.phone || ''}"`,
+    `"${l.website || ''}"`,
+    `"${(l.address || '').replace(/"/g, '""')}"`
   ]);
 
-  const csvStr = [headers, ...rows].map(r => r.join(',')).join('\n');
-  const blob = new Blob(['\uFEFF' + csvStr], { type: 'text/csv;charset=utf-8;' });
-  const url = URL.createObjectURL(blob);
+  const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv' });
   const a = document.createElement('a');
-  a.href = url;
-
-  const qry = $('searchQuery').value.replace(/\s+/g, '_');
-  const loc = $('locationQuery').value.replace(/\s+/g, '_');
-  a.download = `leads_${qry}_${loc}_${datestamp()}.csv`;
+  a.href = URL.createObjectURL(blob);
+  a.download = `leads_${state.activeNiche}.csv`;
   a.click();
-  URL.revokeObjectURL(url);
-
-  showToast('📥 CSV exported successfully!');
+  showToast('📥 Exported CSV successfully!');
 }
 
-// ─── UI State Helpers ─────────────────────────────────────────
-function updateNavTabs(activeTabId) {
-  ['tabSearch', 'tabResults', 'tabFollowups'].forEach(id => {
-    const el = $(id);
-    if (el) el.classList.remove('active');
-  });
-  const activeEl = $(activeTabId);
-  if (activeEl) activeEl.classList.add('active');
-
-  // Update counts on tab badges
-  if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
-  if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.contactedPhones.size;
+// ─── Settings Modal ──────────────────────────────────────────
+function openSettingsModal() {
+  if ($('apifyApiKey')) $('apifyApiKey').value = state.apifyApiKey;
+  if ($('supabaseUrl')) $('supabaseUrl').value = state.supabaseUrl;
+  if ($('supabaseKey')) $('supabaseKey').value = state.supabaseKey;
+  if ($('settingsModal')) $('settingsModal').classList.remove('hidden');
 }
 
-function goBackToPreviousView() {
-  if (state.leads && state.leads.length > 0) {
-    showState('results');
-  } else {
-    showState('empty');
+function closeSettingsModal() {
+  if ($('settingsModal')) $('settingsModal').classList.add('hidden');
+}
+
+function saveSettings() {
+  state.apifyApiKey = $('apifyApiKey').value.trim();
+  state.supabaseUrl = $('supabaseUrl').value.trim();
+  state.supabaseKey = $('supabaseKey').value.trim();
+
+  localStorage.setItem('apify_api_key', state.apifyApiKey);
+  localStorage.setItem('supabase_url', state.supabaseUrl);
+  localStorage.setItem('supabase_key', state.supabaseKey);
+
+  closeSettingsModal();
+  showToast('⚙️ Settings saved!');
+  fetchScrapedLeadsFromDB();
+  fetchFollowUpsFromDB();
+}
+
+function openImportModal() {
+  const ds = prompt('Enter Apify Dataset ID to import:');
+  if (ds && ds.trim()) {
+    showToast(`Importing dataset ${ds.trim()}...`);
   }
 }
 
-function showState(which) {
-  console.log(`🔍 [LeadMapper Debug] showState('${which}') requested.`);
-  const allIds = ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea', 'closedDealsArea'];
-  allIds.forEach(id => {
-    const el = $(id);
-    if (el) {
-      el.classList.add('hidden');
-    } else {
-      console.warn(`🔍 [LeadMapper Debug] showState: element #${id} NOT FOUND in DOM`);
-    }
-  });
-  const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea', closed: 'closedDealsArea' };
-  const targetId = map[which];
-  if ($(targetId)) {
-    $(targetId).classList.remove('hidden');
-    console.log(`🔍 [LeadMapper Debug] showState('${which}'): Unhidden #${targetId}. Current classList="${$(targetId).className}"`);
-  } else {
-    console.error(`🔍 [LeadMapper Debug] showState('${which}'): Target element #${targetId} NOT FOUND!`);
-  }
-
-  if (which === 'empty') updateNavTabs('tabSearch');
-  if (which === 'results') updateNavTabs('tabResults');
-  if (which === 'followups') updateNavTabs('tabFollowups');
-  if (which === 'closed') updateNavTabs('tabClosedDeals');
-}
-
-function setBtnLoading(loading) {
-  const btn = $('generateBtn');
-  btn.disabled = loading;
-  $('btnContent').classList.toggle('hidden', loading);
-  $('btnLoader').classList.toggle('hidden', !loading);
-}
-
-function setProgress(pct) {
-  $('progressBar').style.width = `${pct}%`;
-}
-
-function activateStep(num) {
-  for (let i = 1; i <= 4; i++) {
-    const el = $(`step${i}`);
-    if (i < num) {
-      el.classList.remove('active');
-      el.classList.add('done');
-    } else if (i === num) {
-      el.classList.add('active');
-      el.classList.remove('done');
-    } else {
-      el.classList.remove('active', 'done');
-    }
-  }
-}
-
-function updateResultsMeta(query, location, count) {
-  if ($('resultsTitle')) $('resultsTitle').textContent = `${count} Leads Found`;
-  if ($('resultsSubtitle')) $('resultsSubtitle').textContent = `"${query}" in ${location}`;
-}
-
-function showError(msg) {
-  $('errorMessage').textContent = msg;
-  showState('error');
-}
-
-function resetToEmpty() {
-  state.leads = [];
-  state.filteredLeads = [];
-  $('filterInput').value = '';
-  $('totalCountText').textContent = '0 leads found';
-  showState('empty');
-}
-
-// ─── Toast ────────────────────────────────────────────────────
-let toastTimer;
-function showToast(msg) {
-  const toast = $('toast');
-  $('toastMessage').textContent = msg;
-  toast.classList.remove('hidden', 'show');
-  void toast.offsetWidth; // reflow
-  toast.classList.add('show');
-
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(() => toast.classList.remove('show'), 3000);
-}
-
-// ─── Utility ──────────────────────────────────────────────────
-function copyText(text, successMsg = 'Copied!') {
-  navigator.clipboard.writeText(text).then(() => showToast(successMsg));
-}
-
-function openUrl(url) {
-  const win = window.open(url, '_blank');
-  if (!win || win.closed || typeof win.closed === 'undefined') {
-    // Fallback if browser blocked popup window
-    window.location.href = url;
-  }
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function truncate(str, max) {
-  if (!str) return '—';
-  return str.length > max ? str.slice(0, max) + '…' : str;
-}
-
+// ─── Helper Utils ────────────────────────────────────────────
 function escapeHtml(str) {
-  if (!str || str === '—') return str || '—';
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
 
-function csvEscape(val) {
-  if (!val) return '';
-  const str = String(val);
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
+function truncate(str, len) {
+  if (!str) return '';
+  return str.length > len ? str.substring(0, len) + '…' : str;
+}
+
+// ─── App Initialization ──────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  checkAuth();
+
+  const savedKey = localStorage.getItem('apify_api_key');
+  if (savedKey) state.apifyApiKey = savedKey;
+
+  const savedSbUrl = localStorage.getItem('supabase_url');
+  if (savedSbUrl) state.supabaseUrl = savedSbUrl;
+
+  const savedSbKey = localStorage.getItem('supabase_key');
+  if (savedSbKey) state.supabaseKey = savedSbKey;
+
+  renderNichePills();
+
+  const restored = restoreActiveSession();
+  fetchScrapedLeadsFromDB();
+  fetchFollowUpsFromDB();
+
+  // If restored, show results view, otherwise launcher
+  if (restored) {
+    setView('grid');
+  } else {
+    setView('empty');
   }
-  return str;
-}
-
-function datestamp() {
-  return new Date().toISOString().slice(0, 10);
-}
+});
