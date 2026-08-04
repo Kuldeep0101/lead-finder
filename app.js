@@ -521,25 +521,31 @@ async function fetchScrapedLeadsFromDB() {
 
     if (res.ok) {
       const data = await res.json();
-      if (data && data.length > 0) {
-        state.leads = data.map((d, idx) => ({
-          num: idx + 1,
-          name: d.name || 'Unknown Business',
-          category: d.category || '—',
-          rating: d.rating ? parseFloat(d.rating) : null,
-          reviewsCount: d.reviews_count || 0,
-          phone: d.phone || null,
-          website: d.website || null,
-          address: d.address || '—',
-          googleMapsUrl: d.google_maps_url || null,
-          niche: d.niche || 'coaching'
-        }));
+      // Strictly scope to current workspace niche in JS memory
+      const nicheLeads = (data || []).filter(d => {
+        if (state.activeNiche === 'coaching') {
+          return !d.niche || d.niche === 'coaching';
+        }
+        return d.niche === state.activeNiche;
+      });
 
-        filterLeads();
-        if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
-        saveActiveSession(`Cloud DB`, 'Supabase', state.leads);
-        return true;
-      }
+      state.leads = nicheLeads.map((d, idx) => ({
+        num: idx + 1,
+        name: d.name || 'Unknown Business',
+        category: d.category || '—',
+        rating: d.rating ? parseFloat(d.rating) : null,
+        reviewsCount: d.reviews_count || 0,
+        phone: d.phone || null,
+        website: d.website || null,
+        address: d.address || '—',
+        googleMapsUrl: d.google_maps_url || null,
+        niche: d.niche || state.activeNiche
+      }));
+
+      filterLeads();
+      if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = state.leads.length;
+      saveActiveSession(`Cloud DB`, 'Supabase', state.leads);
+      return true;
     }
   } catch (err) {
     console.warn('Supabase fetch error:', err);
@@ -562,16 +568,26 @@ async function fetchFollowUpsFromDB() {
       const data = await res.json();
       data.forEach(row => { if (row.phone) state.contactedPhones.add(row.phone); });
 
-      state.followups = data.filter(d => d.status !== 'closed');
-      state.closedDeals = data.filter(d => d.status === 'closed');
+      // Strictly scope contacted CRM and closed deals to current workspace niche
+      state.followups = (data || []).filter(d => {
+        if (d.status === 'closed') return false;
+        if (state.activeNiche === 'coaching') return !d.niche || d.niche === 'coaching';
+        return d.niche === state.activeNiche;
+      });
+
+      state.closedDeals = (data || []).filter(d => {
+        if (d.status !== 'closed') return false;
+        if (state.activeNiche === 'coaching') return !d.niche || d.niche === 'coaching';
+        return d.niche === state.activeNiche;
+      });
 
       renderFollowUpsView();
       renderClosedDealsView();
 
       if ($('contactedNavBadge')) $('contactedNavBadge').textContent = state.followups.length;
       if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
-      if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} leads in outreach pipeline`;
-      if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} won deals`;
+      if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} leads in ${getNicheConfig(state.activeNiche).name} outreach pipeline`;
+      if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} won deals in ${getNicheConfig(state.activeNiche).name}`;
     }
   } catch(e) {}
 }
