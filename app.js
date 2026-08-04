@@ -115,9 +115,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Restore saved API key
   const saved = localStorage.getItem('apify_api_key');
-  if (saved) $('apifyApiKey').value = saved;
+  if (saved && $('apifyApiKey')) $('apifyApiKey').value = saved;
 
-  $('apifyApiKey').addEventListener('input', (e) => {
+  $('apifyApiKey')?.addEventListener('input', (e) => {
     localStorage.setItem('apify_api_key', e.target.value.trim());
   });
 
@@ -128,12 +128,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Restore Template and Deduplication state
   const savedTemplate = localStorage.getItem('outreach_template');
-  if (savedTemplate) {
+  if (savedTemplate && $('outreachTemplate')) {
     $('outreachTemplate').value = savedTemplate;
     state.outreachTemplate = savedTemplate;
   }
   const savedFollowupTemplate = localStorage.getItem('outreach_followup_template');
-  if (savedFollowupTemplate) {
+  if (savedFollowupTemplate && $('outreachFollowupTemplate')) {
     $('outreachFollowupTemplate').value = savedFollowupTemplate;
     state.outreachFollowupTemplate = savedFollowupTemplate;
   }
@@ -141,14 +141,14 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedDedup = localStorage.getItem('remove_duplicates');
   if (savedDedup !== null) {
     const isDedup = savedDedup === 'true';
-    $('removeDuplicatesToggle').checked = isDedup;
+    if ($('removeDuplicatesToggle')) $('removeDuplicatesToggle').checked = isDedup;
     state.removeDuplicates = isDedup;
   }
 
   const savedNoWebsite = localStorage.getItem('only_without_website');
   if (savedNoWebsite !== null) {
     const isNoWebsite = savedNoWebsite === 'true';
-    $('onlyWithoutWebsiteToggle').checked = isNoWebsite;
+    if ($('onlyWithoutWebsiteToggle')) $('onlyWithoutWebsiteToggle').checked = isNoWebsite;
     state.onlyWithoutWebsite = isNoWebsite;
   }
   
@@ -170,12 +170,12 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedOnlyContacted = localStorage.getItem('only_contacted');
   if (savedOnlyContacted !== null) {
     const isContacted = savedOnlyContacted === 'true';
-    $('onlyContactedToggle').checked = isContacted;
+    if ($('onlyContactedToggle')) $('onlyContactedToggle').checked = isContacted;
     state.onlyContacted = isContacted;
   }
   
   // Setup outreach listeners
-  $('removeDuplicatesToggle').addEventListener('change', (e) => {
+  $('removeDuplicatesToggle')?.addEventListener('change', (e) => {
     state.removeDuplicates = e.target.checked;
     localStorage.setItem('remove_duplicates', state.removeDuplicates);
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
@@ -199,7 +199,7 @@ document.addEventListener('DOMContentLoaded', () => {
     if(state.leads.length > 0) filterLeads();
   });
 
-  $('onlyContactedToggle').addEventListener('change', (e) => {
+  $('onlyContactedToggle')?.addEventListener('change', (e) => {
     state.onlyContacted = e.target.checked;
     localStorage.setItem('only_contacted', state.onlyContacted);
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
@@ -221,23 +221,23 @@ document.addEventListener('DOMContentLoaded', () => {
   const savedSbKey = localStorage.getItem('supabase_key') || DEFAULT_SUPABASE_KEY;
 
   if (savedSbUrl) {
-    $('supabaseUrl').value = savedSbUrl;
+    if ($('supabaseUrl')) $('supabaseUrl').value = savedSbUrl;
     state.supabaseUrl = savedSbUrl;
     localStorage.setItem('supabase_url', savedSbUrl);
   }
   if (savedSbKey) {
-    $('supabaseKey').value = savedSbKey;
+    if ($('supabaseKey')) $('supabaseKey').value = savedSbKey;
     state.supabaseKey = savedSbKey;
     localStorage.setItem('supabase_key', savedSbKey);
   }
 
-  $('supabaseUrl').addEventListener('input', (e) => {
+  $('supabaseUrl')?.addEventListener('input', (e) => {
     state.supabaseUrl = e.target.value.trim();
     localStorage.setItem('supabase_url', state.supabaseUrl);
     fetchContactedFromDB(); // Attempt sync when updated
     fetchSearchHistoryFromDB();
   });
-  $('supabaseKey').addEventListener('input', (e) => {
+  $('supabaseKey')?.addEventListener('input', (e) => {
     state.supabaseKey = e.target.value.trim();
     localStorage.setItem('supabase_key', state.supabaseKey);
     fetchContactedFromDB(); // Attempt sync when updated
@@ -245,9 +245,9 @@ document.addEventListener('DOMContentLoaded', () => {
   });
   
   // Toggle DB key visibility
-  $('toggleDbKey').addEventListener('click', () => {
+  $('toggleDbKey')?.addEventListener('click', () => {
     const input = $('supabaseKey');
-    input.type = input.type === 'password' ? 'text' : 'password';
+    if (input) input.type = input.type === 'password' ? 'text' : 'password';
   });
 
   // Initial sync attempt
