@@ -197,7 +197,7 @@ body {
   width: var(--sidebar-width);
   min-width: var(--sidebar-width);
   max-width: var(--sidebar-width);
-  flex-shrink: 0;
+  flex: 0 0 var(--sidebar-width);
   box-sizing: border-box;
   min-height: calc(100vh - var(--header-height));
   background: var(--bg-sidebar);
@@ -215,26 +215,25 @@ body {
   gap: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
-  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.3s ease;
+  transition: margin-left 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.3s ease;
+  z-index: 10;
 }
 
 body.sidebar-collapsed .sidebar,
 .sidebar-collapsed .sidebar {
-  width: 0 !important;
-  min-width: 0 !important;
-  max-width: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  border-right: none !important;
+  margin-left: calc(-1 * var(--sidebar-width)) !important;
+  width: var(--sidebar-width) !important;
+  min-width: var(--sidebar-width) !important;
+  max-width: var(--sidebar-width) !important;
+  flex: 0 0 var(--sidebar-width) !important;
   opacity: 0 !important;
   pointer-events: none !important;
-  overflow: hidden !important;
   visibility: hidden !important;
+  overflow: hidden !important;
 }
 
 body.sidebar-collapsed .sidebar *,
 .sidebar-collapsed .sidebar * {
-  display: none !important;
   visibility: hidden !important;
   opacity: 0 !important;
 }
@@ -1765,7 +1764,11 @@ body.sidebar-collapsed .sidebar *,
 
   /* Off-Canvas / Collapsible Sidebar on Mobile */
   .sidebar {
-    width: 100%;
+    width: 100% !important;
+    min-width: 100% !important;
+    max-width: 100% !important;
+    flex: 0 0 auto !important;
+    margin-left: 0 !important;
     min-height: auto;
     height: auto;
     position: relative;
@@ -1778,12 +1781,16 @@ body.sidebar-collapsed .sidebar *,
     overflow: hidden;
   }
 
+  body.sidebar-collapsed .sidebar,
   .sidebar-collapsed .sidebar {
-    max-height: 0;
-    padding: 0 14px;
-    border-bottom: none;
-    opacity: 0;
-    pointer-events: none;
+    max-height: 0 !important;
+    margin-left: 0 !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    visibility: hidden !important;
   }
 
   /* Dashboard Container */
