@@ -388,8 +388,8 @@ function renderFollowUpsView() {
       badgeHtml = `<span class="status-pill ready">💬 Ready for Follow-up (${diffDays}d ago)</span>`;
       actionBtnHtml = `<button class="card-action-btn whatsapp-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'followup')">💬 Follow up</button>`;
     } else {
-      badgeHtml = `<span class="status-pill urgent">🔥 Final Reminder (${diffDays}d ago)</span>`;
-      actionBtnHtml = `<button class="card-action-btn warning-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'final')">🔥 Final Reminder</button>`;
+      badgeHtml = `<span class="status-pill urgent">🔥 Final Followup (${diffDays}d ago)</span>`;
+      actionBtnHtml = `<button class="card-action-btn warning-btn" onclick="openFollowupWhatsApp('${item.phone}', '${escapeHtml(item.name || 'Lead')}', 'final')">🔥 Send Final Followup</button>`;
     }
 
     const cleanPhone = (item.phone || '').replace(/[^0-9]/g, '');
