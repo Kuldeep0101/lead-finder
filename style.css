@@ -2308,3 +2308,98 @@ body.sidebar-collapsed .sidebar *,
   color: #92400e;
   font-size: 0.88rem;
 }
+
+/* 3-Dots Action Dropdown Menu */
+.followup-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 8px;
+}
+
+.card-menu-wrapper {
+  position: relative;
+}
+
+.three-dots-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 6px;
+  color: var(--text-muted);
+  line-height: 1;
+  transition: var(--transition);
+}
+
+.three-dots-btn:hover {
+  background: #e2e8f0;
+  color: var(--text-primary);
+}
+
+.three-dots-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: #ffffff;
+  border: 1px solid var(--border-subtle);
+  border-radius: 10px;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.12);
+  z-index: 200;
+  min-width: 170px;
+  overflow: hidden;
+  display: none;
+}
+
+.three-dots-dropdown.show {
+  display: block;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.dropdown-item {
+  width: 100%;
+  padding: 10px 14px;
+  border: none;
+  background: none;
+  text-align: left;
+  font-size: 0.82rem;
+  font-family: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  transition: background 0.15s;
+}
+
+.dropdown-item:hover {
+  background: #f1f5f9;
+  color: #4f46e5;
+}
+
+/* PC View Center & Compact Sizing Constraints */
+@media (min-width: 992px) {
+  .full-width-dashboard {
+    max-width: 1080px !important;
+    margin: 0 auto !important;
+    padding: 16px 20px !important;
+  }
+
+  .leads-grid {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)) !important;
+    gap: 14px !important;
+  }
+
+  .followups-grid {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)) !important;
+    gap: 14px !important;
+  }
+
+  .lead-card, .followup-card {
+    padding: 12px 14px !important;
+  }
+}
