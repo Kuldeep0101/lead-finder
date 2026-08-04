@@ -197,6 +197,7 @@ body {
   width: 100% !important;
   max-width: 100% !important;
   padding: 0 !important;
+  overflow: visible !important;
 }
 
 .full-width-dashboard {
@@ -634,8 +635,8 @@ body.sidebar-collapsed .sidebar *,
   flex: 1;
   min-width: 0;
   padding: 24px;
-  min-height: calc(100vh - var(--header-height));
-  overflow-y: auto;
+  min-height: 100vh;
+  overflow: visible;
   transition: var(--transition-slow);
 }
 
