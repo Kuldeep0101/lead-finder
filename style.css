@@ -195,38 +195,48 @@ body {
 /* === Sidebar === */
 .sidebar {
   width: var(--sidebar-width);
+  min-width: var(--sidebar-width);
+  max-width: var(--sidebar-width);
+  flex-shrink: 0;
+  box-sizing: border-box;
   min-height: calc(100vh - var(--header-height));
   background: var(--bg-sidebar);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid var(--border-subtle);
-  padding: 24px 20px;
+  padding: 20px 16px;
   position: sticky;
   top: var(--header-height);
   height: calc(100vh - var(--header-height));
   overflow-y: auto;
+  overflow-x: hidden;
   display: flex;
   flex-direction: column;
   gap: 4px;
   scrollbar-width: thin;
   scrollbar-color: var(--border-subtle) transparent;
-  transition: var(--transition-slow);
+  transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease, padding 0.3s ease;
 }
 
+body.sidebar-collapsed .sidebar,
 .sidebar-collapsed .sidebar {
-  width: 0;
-  min-width: 0;
-  padding: 0;
-  margin: 0;
-  border-right: none;
-  opacity: 0;
-  pointer-events: none;
+  width: 0 !important;
+  min-width: 0 !important;
+  max-width: 0 !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  border-right: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
   overflow: hidden !important;
-  visibility: hidden;
+  visibility: hidden !important;
 }
 
+body.sidebar-collapsed .sidebar *,
 .sidebar-collapsed .sidebar * {
   display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
 }
 .sidebar::-webkit-scrollbar { width: 4px; }
 .sidebar::-webkit-scrollbar-track { background: transparent; }
@@ -586,6 +596,7 @@ body {
 /* === Dashboard Area === */
 .dashboard {
   flex: 1;
+  min-width: 0;
   padding: 24px;
   min-height: calc(100vh - var(--header-height));
   overflow-y: auto;
