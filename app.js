@@ -175,8 +175,6 @@ document.addEventListener('DOMContentLoaded', () => {
   }
   
   // Setup outreach listeners
-  });
-
   $('removeDuplicatesToggle').addEventListener('change', (e) => {
     state.removeDuplicates = e.target.checked;
     localStorage.setItem('remove_duplicates', state.removeDuplicates);
