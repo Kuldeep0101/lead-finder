@@ -1183,12 +1183,11 @@ async function fetchFollowUpsFromDB() {
   }
   
   try {
-    // For coaching (default niche), also fetch NULL niche leads for backward compatibility with existing DB rows
     const nicheFilter = state.activeNiche === 'coaching' 
       ? `or=(niche.eq.coaching,niche.is.null)` 
       : `niche=eq.${state.activeNiche}`;
 
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&${nicheFilter}&order=contacted_at.asc`, {
+    let res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&${nicheFilter}&order=contacted_at.asc`, {
       method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
@@ -1196,10 +1195,21 @@ async function fetchFollowUpsFromDB() {
       }
     });
 
+    // Fallback: If niche column does not exist in DB yet (or returns error), fetch all rows without filter
+    if (!res.ok) {
+      res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
+        method: 'GET',
+        headers: {
+          'apikey': state.supabaseKey,
+          'Authorization': `Bearer ${state.supabaseKey}`
+        }
+      });
+    }
+
     if (res.ok) {
       const data = await res.json();
-      state.followups = data.filter(d => d.status !== 'closed');
-      state.closedDeals = data.filter(d => d.status === 'closed');
+      state.followups = data.filter(d => d.status !== 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
+      state.closedDeals = data.filter(d => d.status === 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
       
       renderFollowUpsView();
       renderClosedDealsView();
