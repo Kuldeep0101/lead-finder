@@ -11,6 +11,8 @@ const state = {
   filteredLeads: [],
   currentView: 'grid',
   minRating: 0,
+  hasPhoneOnly: true,
+  minReviews15: false,
   onlyWithoutWebsite: false,
   onlyContacted: false,
   isLoading: false,
@@ -150,10 +152,22 @@ document.addEventListener('DOMContentLoaded', () => {
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
   });
 
-  $('onlyWithoutWebsiteToggle').addEventListener('change', (e) => {
+  $('onlyWithoutWebsiteToggle')?.addEventListener('change', (e) => {
     state.onlyWithoutWebsite = e.target.checked;
     localStorage.setItem('only_without_website', state.onlyWithoutWebsite);
     if(state.leads.length > 0) filterLeads(); // re-filter if leads exist
+  });
+
+  $('hasPhoneOnlyToggle')?.addEventListener('change', (e) => {
+    state.hasPhoneOnly = e.target.checked;
+    localStorage.setItem('has_phone_only', state.hasPhoneOnly);
+    if(state.leads.length > 0) filterLeads();
+  });
+
+  $('minReviewsToggle')?.addEventListener('change', (e) => {
+    state.minReviews15 = e.target.checked;
+    localStorage.setItem('min_reviews_15', state.minReviews15);
+    if(state.leads.length > 0) filterLeads();
   });
 
   $('onlyContactedToggle').addEventListener('change', (e) => {
@@ -572,13 +586,29 @@ function processLeads(raw) {
     category: item.categoryName || item.primaryTypeDisplayName?.text || item.types?.[0] || '—',
     rating: item.totalScore ?? item.rating ?? null,
     reviewsCount: item.reviewsCount ?? item.userRatingCount ?? 0,
-    phone: item.phone || item.internationalPhoneNumber || null,
+    phone: item.phone || item.phoneUnformatted || item.internationalPhoneNumber || null,
     website: cleanUrl(item.website || item.websiteUri || null),
     address: item.address || item.formattedAddress || item.vicinity || '—',
     googleMapsUrl: item.url || item.googleMapsUrl || null,
     lat: item.location?.lat ?? item.latitude ?? null,
     lng: item.location?.lng ?? item.longitude ?? null,
   }));
+}
+
+function getWebsiteStatus(website) {
+  if (!website || website === '—') {
+    return { isPoor: true, type: 'none', label: '🔴 No Website', badgeClass: 'no-website-pill red-pill' };
+  }
+  const w = website.toLowerCase();
+  if (w.includes('.business.site') || w.includes('.wixsite.com') || w.includes('.site123.me') || w.includes('.wordpress.com') || w.includes('.weebly.com') || w.includes('.jimdosite.com')) {
+    let subName = 'Free Builder';
+    if (w.includes('.business.site')) subName = 'Google Business Site';
+    else if (w.includes('.wixsite.com')) subName = 'Wix Subdomain';
+    else if (w.includes('.site123.me')) subName = 'Site123 Subdomain';
+
+    return { isPoor: true, type: 'subdomain', label: `⚠️ Weak Site (${subName})`, badgeClass: 'no-website-pill amber-pill', subName };
+  }
+  return { isPoor: false, type: 'custom', label: 'Custom Domain', badgeClass: '' };
 }
 
 function cleanUrl(url) {
@@ -640,21 +670,35 @@ function createLeadCard(lead, idx) {
         </button>`)
     : '';
 
-  const websiteHtml = lead.website
-    ? `<div class="card-detail-row">
+  const webStatus = getWebsiteStatus(lead.website);
+  let websiteHtml = '';
+  
+  if (webStatus.type === 'none') {
+    websiteHtml = `<div class="card-detail-row no-website-row">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
+        </svg>
+        <span class="${webStatus.badgeClass}">${webStatus.label}</span>
+      </div>`;
+  } else if (webStatus.type === 'subdomain') {
+    websiteHtml = `<div class="card-detail-row">
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+        </svg>
+        <a href="https://${lead.website}" target="_blank" rel="noopener" title="${lead.website}">${truncate(lead.website, 28)}</a>
+        <span class="${webStatus.badgeClass}" style="margin-left:4px;">${webStatus.label}</span>
+      </div>`;
+  } else {
+    websiteHtml = `<div class="card-detail-row">
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
           <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
         </svg>
         <a href="https://${lead.website}" target="_blank" rel="noopener" title="${lead.website}">${truncate(lead.website, 30)}</a>
-      </div>`
-    : `<div class="card-detail-row no-website-row">
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-          <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07"/>
-        </svg>
-        <span class="no-website-pill">No Website</span>
       </div>`;
+  }
 
   const addressHtml = lead.address && lead.address !== '—'
     ? `<div class="card-detail-row">
@@ -817,7 +861,9 @@ function filterLeads() {
 
   state.filteredLeads = processedList
     .filter(l => state.minRating === 0 || (l.rating !== null && l.rating >= state.minRating))
-    .filter(l => !state.onlyWithoutWebsite || !l.website)
+    .filter(l => !state.hasPhoneOnly || (l.phone && l.phone.trim().length > 0))
+    .filter(l => !state.minReviews15 || (l.reviewsCount >= 15))
+    .filter(l => !state.onlyWithoutWebsite || getWebsiteStatus(l.website).isPoor)
     .filter(l => !state.onlyContacted || (l.phone && state.contactedPhones.has(l.phone)))
     .filter(l => {
       if (!query) return true;
@@ -1032,36 +1078,74 @@ function renderFollowUpsView() {
   grid.innerHTML = '';
   
   if (!state.followups || state.followups.length === 0) {
-    grid.innerHTML = `<div style="color:var(--text-muted); padding:20px;">No contacted leads found yet. Send your first outreach to start!</div>`;
+    grid.innerHTML = `<div style="color:var(--text-muted); padding:30px; text-align:center; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
+      <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:10px; opacity:0.5;">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+      </svg>
+      <div>No contacted leads found yet. Send your first outreach to start!</div>
+    </div>`;
     return;
   }
+
+  const now = new Date();
   
   state.followups.forEach(item => {
     const card = document.createElement('div');
     card.className = 'followup-card';
     
-    const date = new Date(item.contacted_at);
-    // Nice friendly date
-    const dateStr = date.toLocaleDateString() + ' @ ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+    const contactedDate = item.contacted_at ? new Date(item.contacted_at) : new Date();
+    const diffMs = now - contactedDate;
+    const hoursAgo = Math.floor(diffMs / (1000 * 60 * 60));
+    const daysAgo = Math.floor(diffMs / (1000 * 60 * 60 * 24));
     
-    // Safety check if column doesn't exist yet
+    const dateStr = contactedDate.toLocaleDateString() + ' @ ' + contactedDate.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
     const count = item.followups_sent || 0;
     
-    const countBadge = count > 0 
-      ? `<span class="followup-badge" style="color:var(--accent-secondary); border-color:var(--accent-secondary)">Followed up: ${count}x</span>`
-      : `<span class="followup-badge">Followups: 0</span>`;
-    
+    let btnText = 'Send Follow-up';
+    let btnClass = 'followup-btn-green';
+    let badgeHtml = '';
+    const isUrgent = daysAgo >= 3;
+
+    if (count === 0) {
+      if (isUrgent) {
+        btnText = '🔥 Send Follow-up #1 (Due)';
+        btnClass = 'followup-btn-red';
+        badgeHtml = `<span class="followup-badge badge-due">🔥 ${daysAgo}d ago — Follow-up #1 Due</span>`;
+      } else {
+        btnText = '🟢 Send Follow-up #1';
+        btnClass = 'followup-btn-green';
+        const timeText = hoursAgo < 24 ? `${hoursAgo}h ago` : `${daysAgo}d ago`;
+        badgeHtml = `<span class="followup-badge badge-recent">⏳ Contacted ${timeText} (Wait 3d)</span>`;
+      }
+    } else if (count === 1) {
+      if (isUrgent) {
+        btnText = '🔥 Send Final Follow-up';
+        btnClass = 'followup-btn-red';
+        badgeHtml = `<span class="followup-badge badge-due">🔥 ${daysAgo}d ago — Final Follow-up Due</span>`;
+      } else {
+        btnText = '🟢 Send Final Follow-up';
+        btnClass = 'followup-btn-green';
+        badgeHtml = `<span class="followup-badge badge-followed">⏳ Followed up 1x (${daysAgo}d ago)</span>`;
+      }
+    } else {
+      btnText = '🛑 Sequence Completed (Re-send Final)';
+      btnClass = 'followup-btn-complete';
+      badgeHtml = `<span class="followup-badge badge-complete">✅ Final Follow-up Sent (2x)</span>`;
+    }
+
     card.innerHTML = `
-      <div class="followup-name">${escapeHtml(item.name || 'Unknown Business')}</div>
+      <div class="followup-header">
+        <div class="followup-name">${escapeHtml(item.name || 'Unknown Business')}</div>
+        <div>${badgeHtml}</div>
+      </div>
       <div class="followup-meta">
-        <div>📞 ${escapeHtml(item.phone)}</div>
+        <div>📞 <strong>${escapeHtml(item.phone)}</strong></div>
         <div class="followup-date">Last contact: ${dateStr}</div>
       </div>
-      <div>${countBadge}</div>
-      <button class="modal-btn send-btn" style="width:100%; justify-content:center; margin-top:8px;" onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
+      <button class="followup-action-btn ${btnClass}" onclick="sendFollowUpMessage('${item.id}', '${item.phone}', '${escapeHtml(item.name || '').replace(/'/g, "\\'")}', ${count})">
         <svg fill="currentColor" viewBox="0 0 24 24" width="16" height="16">
           <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-        </svg> Send Follow-up
+        </svg> ${btnText}
       </button>
     `;
     

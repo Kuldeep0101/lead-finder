@@ -1259,34 +1259,193 @@ body {
   border-color: var(--border-accent);
 }
 
-.followup-name {
-  font-weight: 600;
-  color: var(--text-primary);
-  font-size: 1rem;
+/* === Revamped Glassmorphic Sidebar Cards === */
+.sidebar-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+  transition: var(--transition);
 }
 
-.followup-meta {
+.sidebar-card:hover {
+  border-color: var(--border-accent);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+.sidebar-card-header {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border-subtle);
+  letter-spacing: 0.2px;
+}
+
+.sidebar-card-header svg {
+  color: var(--accent-secondary);
+}
+
+.sidebar-brand-card {
+  margin-bottom: 14px;
+}
+
+.sidebar-brand-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent-secondary);
+  background: rgba(108, 99, 255, 0.12);
+  border: 1px solid rgba(108, 99, 255, 0.3);
+  padding: 6px 14px;
+  border-radius: 20px;
+  width: 100%;
+  justify-content: center;
+  letter-spacing: 0.3px;
+}
+
+.pulse-dot-green {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: pulseGreenDot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulseGreenDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.5; transform: scale(0.8); }
+}
+
+.form-section.compact {
+  margin-bottom: 12px;
+}
+.form-section.compact:last-child {
+  margin-bottom: 0;
+}
+
+/* === Follow-up CRM Cadence & Color-Coding === */
+.followup-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: var(--radius-lg);
+  padding: 20px;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  font-size: 0.85rem;
-  color: var(--text-secondary);
+  gap: 12px;
+  transition: var(--transition);
+  position: relative;
+  overflow: hidden;
 }
 
-.followup-date {
-  font-size: 0.75rem;
-  color: var(--text-muted);
+.followup-card:hover {
+  border-color: var(--border-accent);
+  background: var(--bg-card-hover);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-card);
 }
 
-.followup-badge {
-  display: inline-block;
-  background: rgba(255, 255, 255, 0.05);
+.followup-header {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.followup-action-btn {
+  width: 100%;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition: var(--transition);
+  border: none;
+  margin-top: 4px;
+}
+
+/* Green Button: Less than 3 days (Wait / Normal window) */
+.followup-btn-green {
+  background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+  color: white;
+  box-shadow: 0 4px 14px rgba(16, 185, 129, 0.3);
+}
+
+.followup-btn-green:hover {
+  background: linear-gradient(135deg, #059669 0%, #047857 100%);
+  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.45);
+  transform: translateY(-1px);
+}
+
+/* Red Button: 2-3+ Days Ago (Urgent Due window!) */
+.followup-btn-red {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  color: white;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.4);
+  animation: pulseRedGlow 2s infinite ease-in-out;
+}
+
+.followup-btn-red:hover {
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.6);
+  transform: translateY(-1px);
+}
+
+@keyframes pulseRedGlow {
+  0%, 100% { box-shadow: 0 4px 16px rgba(239, 68, 68, 0.35); }
+  50% { box-shadow: 0 6px 22px rgba(239, 68, 68, 0.65); }
+}
+
+/* Complete Button: 2x Follow-ups Sent */
+.followup-btn-complete {
+  background: var(--bg-input);
   border: 1px solid var(--border-subtle);
-  border-radius: 20px;
-  padding: 2px 8px;
-  font-size: 0.7rem;
   color: var(--text-muted);
-  width: fit-content;
+}
+
+.followup-btn-complete:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+  border-color: var(--border-accent);
+}
+
+/* CRM Badges */
+.badge-due {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.badge-recent {
+  background: rgba(16, 212, 142, 0.12);
+  color: #6ee7b7;
+  border: 1px solid rgba(16, 212, 142, 0.3);
+}
+
+.badge-followed {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.badge-complete {
+  background: rgba(108, 99, 255, 0.15);
+  color: #c4b5fd;
+  border: 1px solid rgba(108, 99, 255, 0.3);
 }
 
 /* === Website Availability Styling === */
@@ -1296,11 +1455,21 @@ body {
   gap: 4px;
   font-size: 0.72rem;
   font-weight: 600;
-  padding: 2px 7px;
+  padding: 2px 8px;
   border-radius: 6px;
-  background: rgba(239, 68, 68, 0.12);
-  color: #f87171;
-  border: 1px solid rgba(239, 68, 68, 0.25);
+  white-space: nowrap;
+}
+
+.no-website-pill.red-pill {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.35);
+}
+
+.no-website-pill.amber-pill {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fcd34d;
+  border: 1px solid rgba(245, 158, 11, 0.35);
 }
 
 .no-website-row {
