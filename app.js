@@ -253,13 +253,17 @@ document.addEventListener('DOMContentLoaded', () => {
   // Initial sync attempt
   if (state.supabaseUrl && state.supabaseKey) {
     fetchContactedFromDB();
+    fetchFollowUpsFromDB();
     fetchSearchHistoryFromDB();
+    fetchScrapedLeadsFromDB();
   }
 
   // Restore active session if refreshed
   const restored = restoreActiveSession();
   if (restored) {
     showToast(`⚡ Restored ${state.filteredLeads.length} leads from last session!`);
+  } else if (state.supabaseUrl && state.supabaseKey) {
+    fetchScrapedLeadsFromDB();
   }
 });
 
@@ -814,12 +818,6 @@ function buildStars(rating) {
 
 // ─── View Toggle ─────────────────────────────────────────────
 function setView(view) {
-  if ((view === 'grid' || view === 'table') && state.leads.length === 0) {
-    showToast('ℹ️ No scraped leads yet. Generate leads or select a recent search!', 'info');
-    showState('empty');
-    return;
-  }
-
   state.currentView = view;
   const grid = $('leadsGrid');
   const table = $('tableWrapper');
@@ -827,24 +825,35 @@ function setView(view) {
   const tableBtn = $('viewTable');
   const followBtn = $('viewFollowups');
 
-  if (view === 'grid') {
-    showState('results');
-    grid.classList.remove('hidden');
-    table.classList.add('hidden');
-    $('followupsArea')?.classList.add('hidden');
-    $('closedDealsArea')?.classList.add('hidden');
-    gridBtn.classList.add('active');
-    tableBtn.classList.remove('active');
-    if (followBtn) followBtn.classList.remove('active');
-  } else if (view === 'table') {
-    showState('results');
-    grid.classList.add('hidden');
-    table.classList.remove('hidden');
-    $('followupsArea')?.classList.add('hidden');
-    $('closedDealsArea')?.classList.add('hidden');
-    tableBtn.classList.add('active');
-    gridBtn.classList.remove('active');
-    if (followBtn) followBtn.classList.remove('active');
+  if (view === 'grid' || view === 'table') {
+    if (state.leads.length === 0) {
+      fetchScrapedLeadsFromDB().then(found => {
+        if (!found && state.leads.length === 0) {
+          showToast('ℹ️ No scraped leads found. Generate leads or import dataset!', 'info');
+          showState('empty');
+        }
+      });
+    } else {
+      showState('results');
+    }
+
+    if (view === 'grid') {
+      grid.classList.remove('hidden');
+      table.classList.add('hidden');
+      $('followupsArea')?.classList.add('hidden');
+      $('closedDealsArea')?.classList.add('hidden');
+      gridBtn.classList.add('active');
+      tableBtn.classList.remove('active');
+      if (followBtn) followBtn.classList.remove('active');
+    } else {
+      grid.classList.add('hidden');
+      table.classList.remove('hidden');
+      $('followupsArea')?.classList.add('hidden');
+      $('closedDealsArea')?.classList.add('hidden');
+      tableBtn.classList.add('active');
+      gridBtn.classList.remove('active');
+      if (followBtn) followBtn.classList.remove('active');
+    }
   } else if (view === 'followups') {
     showState('followups');
     $('followupsArea')?.classList.remove('hidden');
@@ -854,7 +863,7 @@ function setView(view) {
     tableBtn.classList.remove('active');
     fetchFollowUpsFromDB();
   } else if (view === 'closed') {
-    showState('followups');
+    showState('closed');
     $('followupsArea')?.classList.add('hidden');
     $('closedDealsArea')?.classList.remove('hidden');
     if ($('tabClosedDeals')) $('tabClosedDeals').classList.add('active');
@@ -1127,6 +1136,7 @@ function switchNiche(nicheKey) {
   fetchContactedFromDB();
   fetchFollowUpsFromDB();
   fetchSearchHistoryFromDB();
+  fetchScrapedLeadsFromDB();
 }
 
 function getNicheConfig(key) {
@@ -1521,6 +1531,63 @@ async function fetchSearchHistoryFromDB() {
   } catch (err) {
     console.warn('Supabase search history fetch failed:', err);
   }
+}
+
+async function fetchScrapedLeadsFromDB() {
+  if (!state.supabaseUrl || !state.supabaseKey) return false;
+  
+  try {
+    const nicheFilter = state.activeNiche === 'coaching' 
+      ? `or=(niche.eq.coaching,niche.is.null)` 
+      : `niche=eq.${state.activeNiche}`;
+
+    let res = await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads?select=*&${nicheFilter}&order=created_at.desc&limit=300`, {
+      method: 'GET',
+      headers: {
+        'apikey': state.supabaseKey,
+        'Authorization': `Bearer ${state.supabaseKey}`
+      }
+    });
+
+    if (!res.ok) {
+      res = await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads?select=*&order=created_at.desc&limit=300`, {
+        method: 'GET',
+        headers: {
+          'apikey': state.supabaseKey,
+          'Authorization': `Bearer ${state.supabaseKey}`
+        }
+      });
+    }
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.length > 0) {
+        const leads = data.map((d, idx) => ({
+          num: idx + 1,
+          name: d.name || 'Unknown Business',
+          category: d.category || '—',
+          rating: d.rating !== null && d.rating !== undefined ? parseFloat(d.rating) : null,
+          reviewsCount: d.reviews_count || 0,
+          phone: d.phone || null,
+          website: d.website || null,
+          address: d.address || '—',
+          googleMapsUrl: d.google_maps_url || null,
+          niche: d.niche || 'coaching'
+        }));
+
+        state.leads = leads;
+        filterLeads();
+        if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = leads.length;
+        updateResultsMeta(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase Scraped Leads', state.filteredLeads.length);
+        
+        saveActiveSession(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase', leads);
+        return true;
+      }
+    }
+  } catch (err) {
+    console.warn('Supabase scraped_leads fetch failed:', err);
+  }
+  return false;
 }
 
 async function saveLeadsToScrapedLeadsTable(leads) {
