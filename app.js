@@ -842,6 +842,7 @@ function buildStars(rating) {
 
 // ─── View Toggle ─────────────────────────────────────────────
 function setView(view) {
+  console.log(`🔍 [LeadMapper Debug] setView('${view}') called. Current state.leads=${state.leads.length}, contactedPhones=${state.contactedPhones.size}`);
   state.currentView = view;
   const grid = $('leadsGrid');
   const table = $('tableWrapper');
@@ -866,7 +867,8 @@ function setView(view) {
       if (gridBtn) gridBtn.classList.remove('active');
     }
 
-    fetchScrapedLeadsFromDB().then(() => {
+    fetchScrapedLeadsFromDB().then((res) => {
+      console.log(`🔍 [LeadMapper Debug] fetchScrapedLeadsFromDB completed. res=${res}, leads=${state.leads.length}, filtered=${state.filteredLeads.length}`);
       filterLeads();
       renderGridView();
       renderTableView();
@@ -937,20 +939,19 @@ function filterLeads() {
   const query = filterEl ? filterEl.value.toLowerCase().trim() : '';
   
   let processedList = state.leads || [];
+  const initialLen = processedList.length;
 
   // Deduplication Logic
   if (state.removeDuplicates) {
     const uniqueMap = new Map();
     processedList.forEach(lead => {
       if (!lead.phone) {
-        // If no phone, treat it as unique or depending on strategy, we keep it. We'll keep it using its internal ID (num).
         uniqueMap.set(`nophone_${lead.num}`, lead);
       } else {
         const existing = uniqueMap.get(lead.phone);
         if (!existing) {
           uniqueMap.set(lead.phone, lead);
         } else {
-          // Both have same phone. Keep the one with more reviews/better score
           const existingScore = (existing.reviewsCount || 0) * (existing.rating || 1);
           const currentScore = (lead.reviewsCount || 0) * (lead.rating || 1);
           if (currentScore > existingScore) {
@@ -978,27 +979,9 @@ function filterLeads() {
       );
     });
 
-  // Need to update the visual 'num' after filtering dynamically
   state.filteredLeads = state.filteredLeads.map((l, i) => ({ ...l, num: i + 1 }));
 
-  // Update Toolbar toggle button active status
-  const noWebBtn = $('toolbarNoWebsiteBtn');
-  if (noWebBtn) {
-    if (state.onlyWithoutWebsite) {
-      noWebBtn.classList.add('active');
-    } else {
-      noWebBtn.classList.remove('active');
-    }
-  }
-
-  const contactedBtn = $('toolbarContactedBtn');
-  if (contactedBtn) {
-    if (state.onlyContacted) {
-      contactedBtn.classList.add('active');
-    } else {
-      contactedBtn.classList.remove('active');
-    }
-  }
+  console.log(`🔍 [LeadMapper Debug] filterLeads: start=${initialLen}, afterDedup/filter=${state.filteredLeads.length} (hasPhoneOnly=${state.hasPhoneOnly}, removeDup=${state.removeDuplicates})`);
 
   renderGridView();
   renderTableView();
@@ -1243,7 +1226,9 @@ function loadNicheTemplates(nicheKey) {
 // ─── Follow-up CRM Logic ─────────────────────────────────────────
 
 async function fetchFollowUpsFromDB() {
+  console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB started. activeNiche=${state.activeNiche}`);
   if (!state.supabaseUrl || !state.supabaseKey) {
+    console.warn(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB: Supabase URL or Key missing!`);
     if ($('followupsSubtitle')) $('followupsSubtitle').textContent = "Connect Supabase to load follow-ups!";
     return;
   }
@@ -1261,8 +1246,8 @@ async function fetchFollowUpsFromDB() {
       }
     });
 
-    // Fallback: If niche column does not exist in DB yet (or returns error), fetch all rows without filter
     if (!res.ok) {
+      console.warn(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB filtered query status=${res.status}, trying fallback...`);
       res = await fetch(`${state.supabaseUrl}/rest/v1/contacted_leads?select=*&order=contacted_at.asc`, {
         method: 'GET',
         headers: {
@@ -1274,9 +1259,11 @@ async function fetchFollowUpsFromDB() {
 
     if (res.ok) {
       const data = await res.json();
+      console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB success: raw count=${data.length}`);
       state.followups = data.filter(d => d.status !== 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
       state.closedDeals = data.filter(d => d.status === 'closed' && (!d.niche || d.niche === state.activeNiche || state.activeNiche === 'coaching'));
-      
+      console.log(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB parsed: followups=${state.followups.length}, closedDeals=${state.closedDeals.length}`);
+
       renderFollowUpsView();
       renderClosedDealsView();
 
@@ -1284,16 +1271,22 @@ async function fetchFollowUpsFromDB() {
       if ($('closedNavBadge')) $('closedNavBadge').textContent = state.closedDeals.length;
       if ($('followupsSubtitle')) $('followupsSubtitle').textContent = `${state.followups.length} Leads to follow up with`;
       if ($('closedDealsSubtitle')) $('closedDealsSubtitle').textContent = `${state.closedDeals.length} Won client deals in ${getNicheConfig(state.activeNiche).name}`;
+    } else {
+      console.error(`🔍 [LeadMapper Debug] fetchFollowUpsFromDB HTTP error status=${res.status}`);
     }
   } catch (err) {
-    console.warn('Supabase follow-up fetch failed:', err);
+    console.error('Supabase follow-up fetch failed:', err);
   }
 }
 
 function renderFollowUpsView() {
   const grid = $('followupsGrid');
-  if (!grid) return;
+  if (!grid) {
+    console.error('🔍 [LeadMapper Debug] renderFollowUpsView: #followupsGrid DOM element NOT FOUND!');
+    return;
+  }
   grid.innerHTML = '';
+  console.log(`🔍 [LeadMapper Debug] renderFollowUpsView rendering ${state.followups ? state.followups.length : 0} items to #followupsGrid`);
   
   if (!state.followups || state.followups.length === 0) {
     grid.innerHTML = `<div style="color:var(--text-muted); padding:30px; text-align:center; background:var(--bg-card); border-radius:var(--radius-lg); border:1px solid var(--border-subtle);">
@@ -1839,11 +1832,24 @@ function goBackToPreviousView() {
 }
 
 function showState(which) {
-  ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea', 'closedDealsArea'].forEach(id => {
-    if ($(id)) $(id).classList.add('hidden');
+  console.log(`🔍 [LeadMapper Debug] showState('${which}') requested.`);
+  const allIds = ['emptyState', 'loadingState', 'resultsArea', 'errorState', 'followupsArea', 'closedDealsArea'];
+  allIds.forEach(id => {
+    const el = $(id);
+    if (el) {
+      el.classList.add('hidden');
+    } else {
+      console.warn(`🔍 [LeadMapper Debug] showState: element #${id} NOT FOUND in DOM`);
+    }
   });
   const map = { empty: 'emptyState', loading: 'loadingState', results: 'resultsArea', error: 'errorState', followups: 'followupsArea', closed: 'closedDealsArea' };
-  if ($(map[which])) $(map[which]).classList.remove('hidden');
+  const targetId = map[which];
+  if ($(targetId)) {
+    $(targetId).classList.remove('hidden');
+    console.log(`🔍 [LeadMapper Debug] showState('${which}'): Unhidden #${targetId}. Current classList="${$(targetId).className}"`);
+  } else {
+    console.error(`🔍 [LeadMapper Debug] showState('${which}'): Target element #${targetId} NOT FOUND!`);
+  }
 
   if (which === 'empty') updateNavTabs('tabSearch');
   if (which === 'results') updateNavTabs('tabResults');
