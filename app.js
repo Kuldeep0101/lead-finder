@@ -1582,6 +1582,9 @@ async function fetchScrapedLeadsFromDB() {
 
         state.leads = leads;
         filterLeads();
+        renderGridView();
+        renderTableView();
+        
         if ($('scrapedNavBadge')) $('scrapedNavBadge').textContent = leads.length;
         updateResultsMeta(`Cloud DB (${getNicheConfig(state.activeNiche).name})`, 'Supabase Scraped Leads', state.filteredLeads.length);
         
