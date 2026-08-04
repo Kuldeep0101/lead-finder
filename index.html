@@ -103,6 +103,22 @@
         </div>
       </div>
 
+      <!-- Main Navigation Tabs Bar (Desktop View) -->
+      <div class="dashboard-nav-bar" id="dashboardNavBar">
+        <button class="dash-nav-tab active" id="tabSearch" onclick="setView('empty')">
+          🔍 Search Launcher
+        </button>
+        <button class="dash-nav-tab" id="tabResults" onclick="setView('grid')">
+          📋 Scraped Leads <span class="nav-count-badge" id="scrapedNavBadge">0</span>
+        </button>
+        <button class="dash-nav-tab" id="tabFollowups" onclick="setView('followups')">
+          💬 Contacted CRM <span class="nav-count-badge" id="contactedNavBadge">0</span>
+        </button>
+        <button class="dash-nav-tab" id="tabClosedDeals" onclick="setView('closed')">
+          ⭐ Closed Deals <span class="nav-count-badge gold-badge" id="closedNavBadge">0</span>
+        </button>
+      </div>
+
       <!-- Compact Mobile Selectors Bar (Hidden on PC, visible on Mobile) -->
       <div class="mobile-nav-bar-container">
         <div class="mobile-select-row">
