@@ -1459,7 +1459,7 @@ async function fetchSearchHistoryFromDB() {
   if (!state.supabaseUrl || !state.supabaseKey) return;
   
   try {
-    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&order=created_at.desc&limit=10`, {
+    const res = await fetch(`${state.supabaseUrl}/rest/v1/search_history?select=*&niche=eq.${state.activeNiche}&order=created_at.desc&limit=10`, {
       method: 'GET',
       headers: {
         'apikey': state.supabaseKey,
@@ -1504,7 +1504,8 @@ async function saveLeadsToScrapedLeadsTable(leads) {
       phone: l.phone || null,
       website: l.website || null,
       address: l.address || null,
-      google_maps_url: l.googleMapsUrl || null
+      google_maps_url: l.googleMapsUrl || null,
+      niche: state.activeNiche
     }));
 
     await fetch(`${state.supabaseUrl}/rest/v1/scraped_leads`, {
@@ -1536,7 +1537,8 @@ async function saveSearchToDB(query, location, resultsData = null) {
       body: JSON.stringify({ 
         search_query: query,
         location_query: location,
-        results_data: resultsData
+        results_data: resultsData,
+        niche: state.activeNiche
       })
     });
 
